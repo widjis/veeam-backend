@@ -655,9 +655,32 @@ SERVER_HOST=0.0.0.0
 - ✅ **Docker Integration:** Updated Dockerfile and docker-compose.yml for dynamic port configuration
 - ✅ **Backward Compatibility:** Maintains default port 3000 when no environment variable is set
 - ✅ **Docker Permission Fix:** Resolved `EACCES: permission denied` error when accessing `/app/config/config.json`
-- ✅ **File Ownership:** Added explicit permission setting (`chmod -R 755 /app/config`) in Dockerfile
-- ✅ **Enhanced Config Handling:** Creates file with proper ownership (`veeam:nodejs`) and permissions (`644`)
+- ✅ **File Ownership:** Added explicit permission setting (`chmod 775 /app/config`) in Dockerfile for write access
+- ✅ **Enhanced Config Handling:** Creates file with proper ownership (`veeam:nodejs`) and permissions (`664`) for group write
 - ⚠️ **Important:** If experiencing permission errors, rebuild with: `docker compose build --no-cache && docker compose up -d`
+
+## Docker Permission Fix
+
+### Issue Resolution
+Fixed `EACCES: permission denied` error when accessing `/app/config/config.json` in Docker container.
+
+### Root Cause
+The application's ConfigManager uses `fs.writeJson()` to save configuration changes, requiring write permissions that were not properly set.
+
+### Changes Made
+- Updated Dockerfile with write-enabled permissions:
+  - Config directory: `chmod 775` (group write access)
+  - Config file: `chmod 664` (group write access)
+- Enhanced config.json handling with `touch /app/config/config.json` to create file with correct ownership (`veeam:nodejs`)
+- Ensured proper file ownership is set after copying application files
+
+### Rebuild Required
+If you encounter permission errors, rebuild your Docker container:
+```bash
+docker compose down
+docker compose build --no-cache
+docker compose up -d
+```
 
 **New Features:**
 - Add new scheduler tasks with custom cron expressions

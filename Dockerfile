@@ -7,11 +7,11 @@ WORKDIR /app
 COPY package*.json ./
 RUN npm ci --only=production && npm cache clean --force
 
-# Create necessary directories
-RUN mkdir -p logs data config
-
 # Copy application code
 COPY . .
+
+# Create necessary directories
+RUN mkdir -p logs data config
 
 # Create non-root user
 RUN addgroup -g 1001 -S nodejs
