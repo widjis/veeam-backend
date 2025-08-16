@@ -1,0 +1,584 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Veeam Backup Report</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f8f9fa;
+            padding: 20px;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 24px;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .header .subtitle {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 1px;
+            background: #e9ecef;
+            margin: 0;
+        }
+
+        .metric-card {
+            background: white;
+            padding: 25px 20px;
+            text-align: center;
+            position: relative;
+        }
+
+        .metric-icon {
+            font-size: 24px;
+            margin-bottom: 8px;
+        }
+
+        .metric-value {
+            font-size: 28px;
+            font-weight: 700;
+            margin-bottom: 4px;
+        }
+
+        .metric-label {
+            font-size: 11px;
+            color: #6c757d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-weight: 500;
+        }
+
+        .success { color: #28a745; }
+        .warning { color: #ffc107; }
+        .danger { color: #dc3545; }
+        .info { color: #17a2b8; }
+        .secondary { color: #6c757d; }
+
+        .charts-section {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            padding: 30px;
+        }
+
+        .chart-container {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 20px;
+        }
+
+        .chart-title {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 20px;
+            color: #495057;
+        }
+
+        .bar-chart {
+            display: flex;
+            align-items: end;
+            height: 120px;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+
+        .bar {
+            flex: 1;
+            border-radius: 4px 4px 0 0;
+            position: relative;
+            min-height: 20px;
+        }
+
+        .bar.success-bar { background: #28a745; }
+        .bar.warning-bar { background: #ffc107; }
+        .bar.danger-bar { background: #dc3545; }
+
+        .bar-labels {
+            display: flex;
+            gap: 15px;
+            font-size: 12px;
+            color: #6c757d;
+        }
+
+        .bar-label {
+            flex: 1;
+            text-align: center;
+        }
+
+        .donut-chart {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .donut {
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            position: relative;
+            background: conic-gradient(#28a745 0deg 165deg, #e9ecef 165deg 360deg);
+        }
+
+        .donut::before {
+            content: '';
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            width: 60px;
+            height: 60px;
+            background: white;
+            border-radius: 50%;
+        }
+
+        .donut-value {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-weight: 700;
+            font-size: 14px;
+            z-index: 1;
+        }
+
+        .donut-legend {
+            flex: 1;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 8px;
+            font-size: 12px;
+        }
+
+        .legend-color {
+            width: 12px;
+            height: 12px;
+            border-radius: 2px;
+            margin-right: 8px;
+        }
+
+        .repositories-section {
+            padding: 0 30px 30px;
+        }
+
+        .section-title {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 20px;
+            color: #495057;
+        }
+
+        .repo-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .repo-card {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 20px;
+            border-left: 4px solid #28a745;
+        }
+
+        .repo-name {
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .repo-stats {
+            font-size: 12px;
+            color: #6c757d;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 6px;
+            background: #e9ecef;
+            border-radius: 3px;
+            margin: 8px 0;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: #28a745;
+            border-radius: 3px;
+            transition: width 0.3s ease;
+        }
+
+        .performance-section {
+            background: #fff3cd;
+            margin: 0 30px 30px;
+            border-radius: 8px;
+            padding: 20px;
+            border-left: 4px solid #ffc107;
+        }
+
+        .performance-grid {
+            display: grid;
+            grid-template-columns: auto 1fr auto;
+            gap: 20px;
+            align-items: center;
+        }
+
+        .performance-score {
+            text-align: center;
+        }
+
+        .score-value {
+            font-size: 36px;
+            font-weight: 700;
+            color: #856404;
+        }
+
+        .score-label {
+            font-size: 12px;
+            color: #856404;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .recommendations {
+            font-size: 14px;
+        }
+
+        .recommendation-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .recommendation-item::before {
+            content: '⚠️';
+            margin-right: 8px;
+        }
+
+        .jobs-section {
+            padding: 0 30px 30px;
+        }
+
+        .jobs-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 15px;
+        }
+
+        .job-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 16px;
+            background: #f8f9fa;
+            border-radius: 6px;
+            border-left: 4px solid #28a745;
+        }
+
+        .job-item.failed {
+            border-left-color: #dc3545;
+            background: #f8d7da;
+        }
+
+        .job-item.warning {
+            border-left-color: #ffc107;
+            background: #fff3cd;
+        }
+
+        .job-name {
+            font-weight: 500;
+            font-size: 14px;
+        }
+
+        .job-type {
+            font-size: 12px;
+            color: #6c757d;
+        }
+
+        .job-status {
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .status-success {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status-failed {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .status-warning {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .footer {
+            padding: 20px 30px;
+            background: #f8f9fa;
+            border-top: 1px solid #e9ecef;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 12px;
+            color: #6c757d;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔄 Veeam Backup Report</h1>
+            <div class="subtitle">{{reportDate}} • {{reportTime}}</div>
+        </div>
+
+        <div class="metrics-grid">
+            <div class="metric-card">
+                <div class="metric-icon info">📊</div>
+                <div class="metric-value info">{{totalJobs}}</div>
+                <div class="metric-label">Total Jobs</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-icon success">✅</div>
+                <div class="metric-value success">{{successRate}}%</div>
+                <div class="metric-label">Success Rate</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-icon warning">🏥</div>
+                <div class="metric-value warning">{{healthScore}}/100</div>
+                <div class="metric-label">System Health</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-icon danger">❌</div>
+                <div class="metric-value danger">{{failedJobs}}</div>
+                <div class="metric-label">Failed Jobs</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-icon secondary">💾</div>
+                <div class="metric-value secondary">{{storageUsage}}%</div>
+                <div class="metric-label">Storage Usage</div>
+            </div>
+        </div>
+
+        <div class="charts-section">
+            <div class="chart-container">
+                <div class="chart-title">📊 Job Success Rate</div>
+                <div class="bar-chart" id="job-chart">
+                    <!-- Job success bars will be populated by JavaScript -->
+                </div>
+                <div class="bar-labels">
+                    <div class="bar-label">Success</div>
+                    <div class="bar-label">Warning</div>
+                    <div class="bar-label">Failed</div>
+                </div>
+            </div>
+
+            <div class="chart-container">
+                <div class="chart-title">💾 Repository Storage Usage</div>
+                <div class="donut-chart" id="storage-chart">
+                    <!-- Storage charts will be populated by JavaScript -->
+                </div>
+            </div>
+        </div>
+
+        <div class="repositories-section">
+            <div class="section-title">💾 Repository Status</div>
+            <div class="repo-grid" id="repositories-grid">
+                <!-- Repository cards will be populated by JavaScript -->
+            </div>
+        </div>
+
+        <div class="performance-section">
+            <div class="section-title">📈 Performance Analysis & Recommendations</div>
+            <div class="performance-grid">
+                <div class="performance-score">
+                    <div class="score-value">{{healthScore}}</div>
+                    <div class="score-label">System Health Score</div>
+                    <div class="score-label">{{healthStatus}}</div>
+                </div>
+                <div class="recommendations">
+                    <div style="font-weight: 600; margin-bottom: 10px;">System Recommendations:</div>
+                    {{#each recommendations}}
+                    <div class="recommendation-item">{{this}}</div>
+                    {{/each}}
+                </div>
+                <div style="text-align: center;">
+                    <div style="font-size: 24px; margin-bottom: 8px;">✅</div>
+                    <div style="font-size: 12px; color: #856404;">{{healthyRepos}} Healthy Repos</div>
+                    <div style="font-size: 24px; margin: 8px 0;">⚠️</div>
+                    <div style="font-size: 12px; color: #856404;">{{warningRepos}} Warning Repos</div>
+                    <div style="font-size: 24px; margin: 8px 0;">❌</div>
+                    <div style="font-size: 12px; color: #856404;">{{criticalRepos}} Critical Repos</div>
+                    <div style="font-size: 24px; margin: 8px 0;">📊</div>
+                    <div style="font-size: 12px; color: #856404;">{{overallUsage}}% Overall Usage</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="jobs-section">
+            <div class="section-title">📋 Recent Job Status</div>
+            <div class="jobs-grid" id="jobs-grid">
+                <!-- Job items will be populated by JavaScript -->
+            </div>
+        </div>
+
+        <div class="footer">
+            <div>Generated on {{reportDate}} at {{reportTime}}</div>
+            <div>Veeam Insight Dashboard</div>
+        </div>
+    </div>
+
+    <script>
+        // This will be populated by the server with actual data
+        function populateReport(data) {
+            console.log('Populating report with data:', data);
+            
+            // Update metrics using more specific selectors
+            const metricCards = document.querySelectorAll('.metric-card');
+            if (metricCards.length >= 5) {
+                metricCards[0].querySelector('.metric-value').textContent = data.totalJobs;
+                metricCards[1].querySelector('.metric-value').textContent = Math.round(data.successRate) + '%';
+                metricCards[2].querySelector('.metric-value').textContent = data.healthScore + '/100';
+                metricCards[3].querySelector('.metric-value').textContent = data.failedJobs;
+                metricCards[4].querySelector('.metric-value').textContent = Math.round(data.storageUsage) + '%';
+            }
+
+            // Update header dates
+            document.querySelector('.subtitle').textContent = data.reportDate + ' • ' + data.reportTime;
+            document.querySelector('.footer div:first-child').textContent = 'Generated on ' + data.reportDate + ' at ' + data.reportTime;
+
+            // Populate job success chart
+            const jobChart = document.getElementById('job-chart');
+            jobChart.innerHTML = `
+                <div class="bar success-bar" style="height: ${data.successBarHeight}%;"></div>
+                <div class="bar warning-bar" style="height: ${data.warningBarHeight}%;"></div>
+                <div class="bar danger-bar" style="height: ${data.failureBarHeight}%;"></div>
+            `;
+
+            // Populate storage chart
+            const storageChart = document.getElementById('storage-chart');
+            let storageHTML = '';
+            data.repositories.forEach(repo => {
+                const usageAngle = (repo.usage / 100) * 360;
+                storageHTML += `
+                    <div class="donut" style="background: conic-gradient(#28a745 0deg ${usageAngle}deg, #e9ecef ${usageAngle}deg 360deg);">
+                        <div class="donut-value">${repo.usage}%</div>
+                    </div>
+                    <div class="donut-legend">
+                        <div class="legend-item">
+                            <div class="legend-color" style="background: #28a745;"></div>
+                            <span>${repo.name}</span>
+                        </div>
+                        <div style="font-size: 11px; color: #6c757d; margin-left: 20px;">
+                            ${repo.used} / ${repo.capacity}
+                        </div>
+                    </div>
+                `;
+            });
+            storageChart.innerHTML = storageHTML;
+
+            // Populate repositories grid
+            const repoGrid = document.getElementById('repositories-grid');
+            let repoHTML = '';
+            data.repositories.forEach(repo => {
+                repoHTML += `
+                    <div class="repo-card">
+                        <div class="repo-name">${repo.name}</div>
+                        <div class="repo-stats">${repo.used} / ${repo.capacity} (${repo.usage}%)</div>
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: ${repo.usage}%;"></div>
+                        </div>
+                        <div class="repo-stats">${repo.path}</div>
+                    </div>
+                `;
+            });
+            repoGrid.innerHTML = repoHTML;
+
+            // Populate jobs grid
+            const jobsGrid = document.getElementById('jobs-grid');
+            let jobsHTML = '';
+            data.recentJobs.forEach(job => {
+                jobsHTML += `
+                    <div class="job-item ${job.status}">
+                        <div>
+                            <div class="job-name">${job.name}</div>
+                            <div class="job-type">${job.type}</div>
+                        </div>
+                        <div class="job-status status-${job.status}">${job.status}</div>
+                    </div>
+                `;
+            });
+            jobsGrid.innerHTML = jobsHTML;
+
+            // Update performance section
+            document.querySelector('.score-value').textContent = data.healthScore;
+            document.querySelector('.score-label:nth-of-type(2)').textContent = data.healthStatus;
+            
+            // Update recommendations
+            const recommendationsContainer = document.querySelector('.recommendations');
+            let recHTML = '<div style="font-weight: 600; margin-bottom: 10px;">System Recommendations:</div>';
+            data.recommendations.forEach(rec => {
+                recHTML += `<div class="recommendation-item">${rec}</div>`;
+            });
+            recommendationsContainer.innerHTML = recHTML;
+
+            // Update performance stats
+            const perfStats = document.querySelector('.performance-grid > div:last-child');
+            perfStats.innerHTML = `
+                <div style="text-align: center;">
+                    <div style="font-size: 24px; margin-bottom: 8px;">✅</div>
+                    <div style="font-size: 12px; color: #856404;">${data.healthyRepos} Healthy Repos</div>
+                    <div style="font-size: 24px; margin: 8px 0;">⚠️</div>
+                    <div style="font-size: 12px; color: #856404;">${data.warningRepos} Warning Repos</div>
+                    <div style="font-size: 24px; margin: 8px 0;">❌</div>
+                    <div style="font-size: 12px; color: #856404;">${data.criticalRepos} Critical Repos</div>
+                    <div style="font-size: 24px; margin: 8px 0;">📊</div>
+                    <div style="font-size: 12px; color: #856404;">${data.overallUsage}% Overall Usage</div>
+                </div>
+            `;
+        }
+
+        // Wait for data to be injected
+        if (window.reportData) {
+            populateReport(window.reportData);
+        }
+    </script>
+</body>
+</html>

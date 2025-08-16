@@ -1,0 +1,114 @@
+{
+  "veeam": {
+    "baseUrl": "https://your-veeam-server:9419/api/v1",
+    "username": "",
+    "password": "",
+    "tokenPath": "./tokens",
+    "apiTimeout": 30000,
+    "maxRetries": 3
+  },
+  "whatsapp": {
+    "webhookUrl": "",
+    "chatId": "",
+    "retryAttempts": 3,
+    "retryDelay": 1000
+  },
+  "reporting": {
+    "schedules": [
+      {
+        "name": "Daily Report",
+        "cronExpression": "0 8 * * *",
+        "enabled": true,
+        "type": "daily",
+        "includeCharts": false,
+        "recipients": []
+      }
+    ],
+    "defaultSchedule": {
+      "daily": "0 8 * * *",
+      "weekly": "0 8 * * 1",
+      "monthly": "0 8 1 * *"
+    },
+    "timezone": "UTC",
+    "maxReportSize": 4096,
+    "includeHealthScore": true,
+    "includeStorageAnalytics": true,
+    "includePerformanceTrends": true
+  },
+  "alerting": {
+    "enabled": true,
+    "thresholds": {
+      "repositoryUsage": {
+        "warning": 70,
+        "critical": 85
+      },
+      "healthScore": {
+        "warning": 70,
+        "critical": 50
+      },
+      "jobDuration": {
+        "warning": 4,
+        "critical": 8
+      },
+      "failureCount": {
+        "warning": 3,
+        "critical": 5
+      }
+    },
+    "retrySettings": {
+      "maxRetries": 5,
+      "retryInterval": 300000,
+      "escalationInterval": 1800000,
+      "maxEscalations": 3
+    },
+    "alertTypes": {
+      "jobFailure": true,
+      "jobStarted": false,
+      "jobCompleted": false,
+      "repositoryFull": true,
+      "systemHealth": true,
+      "longRunningJob": true,
+      "infrastructureIssue": true
+    },
+    "quietHours": {
+      "enabled": false,
+      "start": "22:00",
+      "end": "06:00",
+      "timezone": "UTC",
+      "allowCritical": true
+    }
+  },
+  "monitoring": {
+    "dataCollection": {
+      "interval": 300000,
+      "batchSize": 100,
+      "cacheTimeout": 300000,
+      "enableCaching": true
+    },
+    "healthCheck": {
+      "interval": 60000,
+      "timeout": 30000,
+      "retries": 3
+    }
+  },
+  "logging": {
+    "level": "info",
+    "maxFiles": 10,
+    "maxSize": "10m",
+    "enableConsole": true,
+    "enableFile": true
+  },
+  "server": {
+    "port": 3000,
+    "host": "localhost",
+    "cors": {
+      "enabled": true,
+      "origin": "*"
+    },
+    "rateLimit": {
+      "enabled": true,
+      "windowMs": 900000,
+      "max": 100
+    }
+  }
+}

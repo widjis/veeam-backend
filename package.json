@@ -1,0 +1,68 @@
+{
+  "name": "veeam-backup-monitor",
+  "version": "1.0.0",
+  "description": "Comprehensive Veeam backup monitoring system with advanced reporting and real-time alerting",
+  "main": "server.js",
+  "scripts": {
+    "start": "node app.js",
+    "dev": "nodemon app.js",
+    "test": "node test-reporting.js",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
+    "test:reporting": "node test-reporting.js",
+    "test:mock": "node test-mock-mode.js",
+    "lint": "eslint src/ --ext .js",
+    "lint:fix": "eslint src/ --ext .js --fix",
+    "pm2:start": "pm2 start ecosystem.config.js",
+    "pm2:stop": "pm2 stop ecosystem.config.js",
+    "pm2:restart": "pm2 restart ecosystem.config.js",
+    "pm2:delete": "pm2 delete ecosystem.config.js",
+    "docker:build": "docker build -t veeam-backend .",
+    "docker:run": "docker run -p 3000:3000 --env-file .env veeam-backend",
+    "docker:compose": "docker-compose up -d",
+    "docker:compose:down": "docker-compose down"
+  },
+  "keywords": [
+    "veeam",
+    "backup",
+    "monitoring",
+    "alerting",
+    "whatsapp",
+    "reporting"
+  ],
+  "author": "IT Team",
+  "license": "MIT",
+  "dependencies": {
+    "axios": "^1.6.0",
+    "cors": "^2.8.5",
+    "dotenv": "^16.3.1",
+    "express": "^4.18.2",
+    "express-rate-limit": "^7.1.5",
+    "fs-extra": "^11.1.1",
+    "helmet": "^7.1.0",
+    "joi": "^17.11.0",
+    "lodash": "^4.17.21",
+    "moment": "^2.29.4",
+    "moment-timezone": "^0.5.43",
+    "multer": "^2.0.2",
+    "node-cache": "^5.1.2",
+    "node-cron": "^3.0.3",
+    "puppeteer": "^24.16.2",
+    "uuid": "^9.0.1",
+    "winston": "^3.11.0",
+    "winston-daily-rotate-file": "^4.7.1"
+  },
+  "devDependencies": {
+    "eslint": "^8.52.0",
+    "eslint-config-standard": "^17.1.0",
+    "eslint-plugin-import": "^2.29.0",
+    "eslint-plugin-node": "^11.1.0",
+    "eslint-plugin-promise": "^6.1.1",
+    "jest": "^29.7.0",
+    "nodemon": "^3.0.1"
+  },
+  "engines": {
+    "node": ">=16.0.0",
+    "npm": ">=8.0.0"
+  }
+}

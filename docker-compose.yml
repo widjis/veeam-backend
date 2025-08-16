@@ -1,0 +1,35 @@
+version: '3.8'
+
+services:
+  veeam-backend:
+    build: .
+    container_name: veeam-backend
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - TZ=UTC
+    env_file:
+      - .env
+    volumes:
+      - ./logs:/app/logs
+      - ./data:/app/data
+      - ./config:/app/config
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000/health', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) }).on('error', () => process.exit(1))"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - veeam-network
+
+networks:
+  veeam-network:
+    driver: bridge
+
+volumes:
+  logs:
+  data:
+  config:
