@@ -35,6 +35,147 @@
 **Commit Hash:** 5c27229
 **Branch:** main (set as upstream)
 
+## Alerting System Analysis (August 16, 2025)
+
+### Alert Types Monitored
+The system monitors the following types of alerts:
+
+1. **Job Failure Alerts** (`jobFailure: true`)
+   - Monitors backup job failures
+   - Warning threshold: 3 failures
+   - Critical threshold: 5 failures
+
+2. **Repository Usage Alerts** (`repositoryFull: true`)
+   - Monitors storage repository capacity
+   - Warning threshold: 70% usage
+   - Critical threshold: 85% usage
+
+3. **System Health Alerts** (`systemHealth: true`)
+   - Monitors overall system health score
+   - Warning threshold: 70/100 health score
+   - Critical threshold: 50/100 health score
+
+4. **Long Running Job Alerts** (`longRunningJob: true`)
+   - Monitors jobs that run longer than expected
+   - Warning threshold: 4 hours
+   - Critical threshold: 8 hours
+
+5. **Infrastructure Issue Alerts** (`infrastructureIssue: true`)
+   - Monitors general infrastructure problems
+
+6. **Job State Change Alerts** (Optional)
+   - Job Started alerts: `jobStarted: false` (disabled)
+   - Job Completed alerts: `jobCompleted: false` (disabled)
+
+### Alert Delivery
+- **Destination**: WhatsApp group chat (`120363123402010871@g.us`)
+- **Webhook URL**: `http://localhost:8192/send-group-message`
+- **Retry Logic**: 3 attempts with 1 second delay between retries
+- **Escalation**: Up to 3 escalations with 30-minute intervals
+
+### Polling Configuration
+
+#### Main Monitoring Interval
+- **Data Collection Interval**: 300,000ms (5 minutes)
+- **Location**: `config/config.json` → `monitoring.dataCollection.interval`
+- **Function**: Controls how often the system collects data from Veeam API
+
+#### Health Check Interval
+- **Health Check Interval**: 60,000ms (1 minute)
+- **Location**: `config/config.json` → `monitoring.healthCheck.interval`
+- **Timeout**: 30 seconds
+- **Retries**: 3 attempts
+
+#### Alert Processing
+- **Alert Check Frequency**: Every 5 minutes (tied to data collection)
+- **Retry Interval**: 300,000ms (5 minutes)
+- **Auto-acknowledgment**: After 24 hours
+
+### How to Configure Polling Time
+
+To modify the polling intervals, edit the `config/config.json` file:
+
+```json
+{
+  "monitoring": {
+    "dataCollection": {
+      "interval": 300000,    // Main polling interval (milliseconds)
+      "batchSize": 100,
+      "cacheTimeout": 300000,
+      "enableCaching": true
+    },
+    "healthCheck": {
+      "interval": 60000,     // Health check interval (milliseconds)
+      "timeout": 30000,
+      "retries": 3
+    }
+  }
+}
+```
+
+**Common Intervals:**
+- 1 minute: 60000
+- 5 minutes: 300000 (current)
+- 10 minutes: 600000
+- 15 minutes: 900000
+- 30 minutes: 1800000
+
+### Alert Configuration
+
+Alert thresholds can be modified in `config/config.json`:
+
+```json
+{
+  "alerting": {
+    "enabled": true,
+    "thresholds": {
+      "repositoryUsage": {
+        "warning": 70,
+        "critical": 85
+      },
+      "healthScore": {
+        "warning": 70,
+        "critical": 50
+      },
+      "jobDuration": {
+        "warning": 4,
+        "critical": 8
+      },
+      "failureCount": {
+        "warning": 3,
+        "critical": 5
+      }
+    },
+    "quietHours": {
+      "enabled": false,
+      "start": "22:00",
+      "end": "06:00",
+      "timezone": "UTC",
+      "allowCritical": true
+    }
+  }
+}
+```
+
+### Current Status
+- **System Status**: ✅ Running and operational
+- **Alert Service**: ✅ Fixed and working (corrected method calls)
+- **API Endpoints**: ✅ Available at `http://localhost:3000/api/alerts/*`
+- **Data Collection**: ✅ Every 5 minutes
+- **WhatsApp Integration**: ✅ Configured for group notifications
+
+### API Endpoints for Alerts
+- `GET /api/alerts` - Get all active alerts
+- `GET /api/alerts/stats` - Get alert statistics
+- `POST /api/alerts/:id/acknowledge` - Acknowledge an alert
+- `GET /api/alerts/acknowledged` - Get acknowledged alerts
+
+### Troubleshooting
+- Alert statistics may show "Service Unavailable" if Veeam API is unreachable
+- Check server logs for detailed error messages
+- Verify Veeam API credentials and connectivity
+- Ensure WhatsApp webhook service is running on port 8192
+
 ## Future Development Plans
 
 ### Frontend Web UI Development (Planned)

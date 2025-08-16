@@ -110,11 +110,11 @@ class VeeamBackendServer {
         // Initialize reporting engine
         this.reportingEngine = new ReportingEngine(this.dataCollectionService, config.reporting);
         
-        // Initialize alerting service
-        this.alertingService = new AlertingService(config.alerting);
-        
         // Initialize WhatsApp service
         this.whatsappService = new WhatsAppService(config.whatsapp);
+        
+        // Initialize alerting service
+        this.alertingService = new AlertingService(this.dataCollectionService, this.whatsappService, config.alerting);
         
         // Initialize HTML report service
         this.htmlReportService = new HtmlReportService();
@@ -622,20 +622,10 @@ class VeeamBackendServer {
             const data = await this.dataCollectionService.collectAllData();
             
             // Check for alerts
-            await this.alertingService.checkAllAlerts(data);
+            await this.alertingService.runAlertChecks();
             
             // Send pending notifications
-            const pendingAlerts = await this.alertingService.getPendingNotifications();
-            
-            for (const alert of pendingAlerts) {
-                const success = await this.whatsappService.sendAlert(alert);
-                if (success) {
-                    await this.alertingService.markNotificationSent(alert.id);
-                }
-            }
-            
-            // Clean up old alerts
-            await this.alertingService.cleanupOldAlerts();
+            await this.alertingService.sendPendingAlerts();
             
         } catch (error) {
             this.logger.error('Monitoring execution failed', { error: error.message });
