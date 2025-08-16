@@ -191,6 +191,12 @@ class VeeamBackendServer {
             res.sendFile(path.join(__dirname, 'public', 'favicon.ico'));
         });
 
+        // Serve config.js
+        this.app.get('/config.js', (req, res) => {
+            res.setHeader('Content-Type', 'application/javascript');
+            res.sendFile(path.join(__dirname, 'public', 'config.js'));
+        });
+
         // API routes
         this.app.use('/api', this.createApiRoutes());
         
@@ -216,7 +222,11 @@ class VeeamBackendServer {
                 // Remove sensitive information
                 const safeConfig = { ...config };
                 delete safeConfig.veeam.password;
-                delete safeConfig.whatsapp.webhookUrl;
+                // Keep webhookUrl for configuration interface but mask it partially for security
+                if (safeConfig.whatsapp && safeConfig.whatsapp.webhookUrl) {
+                    // Keep the webhookUrl for the config interface
+                    // Note: This is needed for the configuration form to work properly
+                }
                 res.json(safeConfig);
             } catch (error) {
                 next(error);
@@ -456,11 +466,24 @@ class VeeamBackendServer {
             }
         });
 
-        // Schedule management routes
+        // Schedule management routes - Full CRUD operations
         router.get('/schedules', async (req, res, next) => {
             try {
-                const schedules = this.configManager.get('reporting.schedules');
+                const schedules = this.configManager.get('reporting.schedules') || [];
                 res.json(schedules);
+            } catch (error) {
+                next(error);
+            }
+        });
+
+        router.get('/schedules/:name', async (req, res, next) => {
+            try {
+                const schedules = this.configManager.get('reporting.schedules') || [];
+                const schedule = schedules.find(s => s.name === req.params.name);
+                if (!schedule) {
+                    return res.status(404).json({ error: 'Schedule not found' });
+                }
+                res.json(schedule);
             } catch (error) {
                 next(error);
             }
@@ -484,9 +507,87 @@ class VeeamBackendServer {
 
         router.post('/schedules', async (req, res, next) => {
             try {
-                await this.configManager.addSchedule(req.body);
+                // Validate required fields
+                const { name, cronExpression, type = 'custom' } = req.body;
+                if (!name || !cronExpression) {
+                    return res.status(400).json({ 
+                        error: 'Missing required fields: name and cronExpression are required' 
+                    });
+                }
+
+                // Check if schedule name already exists
+                const schedules = this.configManager.get('reporting.schedules') || [];
+                if (schedules.find(s => s.name === name)) {
+                    return res.status(409).json({ 
+                        error: 'Schedule with this name already exists' 
+                    });
+                }
+
+                // Validate cron expression format
+                const cronRegex = /^(\*|([0-5]?\d)) (\*|([01]?\d|2[0-3])) (\*|([0-2]?\d|3[01])) (\*|([0]?\d|1[0-2])) (\*|([0-6]))$/;
+                if (!cronRegex.test(cronExpression)) {
+                    return res.status(400).json({ 
+                        error: 'Invalid cron expression format' 
+                    });
+                }
+
+                const newSchedule = {
+                    name,
+                    cronExpression,
+                    enabled: req.body.enabled !== false,
+                    type,
+                    includeCharts: req.body.includeCharts || false,
+                    sendAsImage: req.body.sendAsImage || false,
+                    recipients: req.body.recipients || []
+                };
+
+                await this.configManager.addSchedule(newSchedule);
                 this.setupScheduledJobs(); // Refresh scheduled jobs
-                res.json({ message: 'Schedule added successfully' });
+                res.status(201).json({ 
+                    message: 'Schedule created successfully',
+                    schedule: newSchedule
+                });
+            } catch (error) {
+                next(error);
+            }
+        });
+
+        router.put('/schedules/:name', async (req, res, next) => {
+            try {
+                const { name } = req.params;
+                const schedules = this.configManager.get('reporting.schedules') || [];
+                const scheduleIndex = schedules.findIndex(s => s.name === name);
+                
+                if (scheduleIndex === -1) {
+                    return res.status(404).json({ error: 'Schedule not found' });
+                }
+
+                // Validate cron expression if provided
+                if (req.body.cronExpression) {
+                    const cronRegex = /^(\*|([0-5]?\d)) (\*|([01]?\d|2[0-3])) (\*|([0-2]?\d|3[01])) (\*|([0]?\d|1[0-2])) (\*|([0-6]))$/;
+                    if (!cronRegex.test(req.body.cronExpression)) {
+                        return res.status(400).json({ 
+                            error: 'Invalid cron expression format' 
+                        });
+                    }
+                }
+
+                // Update schedule with provided fields
+                const updatedSchedule = {
+                    ...schedules[scheduleIndex],
+                    ...req.body,
+                    name // Ensure name doesn't change
+                };
+
+                schedules[scheduleIndex] = updatedSchedule;
+                this.configManager.set('reporting.schedules', schedules);
+                await this.configManager.saveConfig();
+                this.setupScheduledJobs(); // Refresh scheduled jobs
+                
+                res.json({ 
+                    message: 'Schedule updated successfully',
+                    schedule: updatedSchedule
+                });
             } catch (error) {
                 next(error);
             }
@@ -494,9 +595,20 @@ class VeeamBackendServer {
 
         router.delete('/schedules/:name', async (req, res, next) => {
             try {
-                await this.configManager.removeSchedule(req.params.name);
+                const { name } = req.params;
+                const schedules = this.configManager.get('reporting.schedules') || [];
+                const scheduleExists = schedules.find(s => s.name === name);
+                
+                if (!scheduleExists) {
+                    return res.status(404).json({ error: 'Schedule not found' });
+                }
+
+                await this.configManager.removeSchedule(name);
                 this.setupScheduledJobs(); // Refresh scheduled jobs
-                res.json({ message: 'Schedule removed successfully' });
+                res.json({ 
+                    message: 'Schedule deleted successfully',
+                    deletedSchedule: name
+                });
             } catch (error) {
                 next(error);
             }

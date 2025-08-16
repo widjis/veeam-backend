@@ -630,6 +630,29 @@ SERVER_HOST=0.0.0.0
 - Regular security updates
 - Monitor access logs
 
+## Recent Changes
+
+### 2025-08-16 - Configuration Interface Improvements
+
+**Fixed Configuration Loading Issues:**
+- ✅ **WhatsApp Integration**: Webhook URL now properly displays in configuration interface
+- ✅ **Dynamic Scheduler Tasks**: Reporting settings now show all configured scheduler tasks dynamically
+- ✅ **Enhanced Error Handling**: Added comprehensive null checks to prevent JavaScript runtime errors
+- ✅ **Improved UI**: Redesigned reporting settings section with individual task controls
+- ✅ **Function Scope Fixes**: Resolved JavaScript reference errors for better stability
+
+**Technical Improvements:**
+- Modified API response to include webhook URL while maintaining security
+- Added `populateSchedulerTasks()` function for dynamic UI generation
+- Created `getCronDescription()` helper for human-readable schedule descriptions
+- Enhanced form population with proper error handling and fallbacks
+- Fixed function accessibility issues in configuration JavaScript
+
+**Files Updated:**
+- `src/server.js` - API response security adjustments
+- `src/public/config.html` - Dynamic scheduler tasks UI
+- `src/public/config.js` - Enhanced error handling and dynamic population
+
 ## Support
 
 For issues and questions:
@@ -637,6 +660,7 @@ For issues and questions:
 2. Review the configuration settings
 3. Test individual components using the test endpoints
 4. Enable debug mode for detailed logging
+5. Check the JOURNAL.md for detailed troubleshooting history
 
 ## License
 

@@ -445,9 +445,96 @@ Completed comprehensive Docker deployment readiness check. **Status: ✅ READY F
 **Result**: Complete CSP compliance achieved, all functionality working properly
 **Testing**: ✅ No CSP errors, ✅ Reload functionality operational, ✅ API integration confirmed
 
+## 2025-08-16 15:22:15 WIB - WhatsApp and Reporting Configuration Loading Fix
+
+**Status**: ✅ RESOLVED - Configuration loading issues fixed for WhatsApp and reporting sections
+
+**Issue**: WhatsApp webhook URL was not loading in the configuration interface, and not all scheduler tasks were being displayed in the reporting settings.
+
+**Root Cause Analysis**:
+1. **Security Filtering**: The `/api/config` endpoint was intentionally removing `whatsapp.webhookUrl` from the response for security reasons
+2. **UI Limitations**: The configuration interface only showed basic reporting settings instead of dynamically displaying all configured scheduler tasks
+3. **Missing Field Mapping**: The reporting section lacked proper handling for multiple scheduler tasks from the API response
+4. **JavaScript Errors**: Missing null checks for nested configuration properties causing runtime errors
+
+**Solution Implemented**:
+1. **Modified API Response**: Updated `src/server.js` to include `webhookUrl` in the configuration response while maintaining security for sensitive fields like `veeam.password`
+2. **Enhanced Reporting UI**: Completely redesigned the reporting settings section in `src/public/config.html` to dynamically display all scheduler tasks
+3. **Dynamic Task Population**: Added `populateSchedulerTasks()` function in `src/public/config.js` to create UI elements for each configured scheduler task
+4. **Improved Error Handling**: Added proper null checks for nested configuration properties to prevent JavaScript errors
+5. **Helper Functions**: Created `getCronDescription()` and moved `extractTimeFromCron()` to global scope for proper accessibility
+6. **Fixed Function Scope**: Resolved JavaScript reference errors by properly organizing function definitions
+
+**Technical Implementation**:
+```javascript
+// WhatsApp configuration with fallbacks
+setValue('whatsapp.webhookUrl', config.whatsapp.webhookUrl || '');
+setValue('whatsapp.chatId', config.whatsapp.chatId || '');
+setValue('whatsapp.timeout', config.whatsapp.timeout || 10000);
+
+// Dynamic scheduler task population
+function populateSchedulerTasks(schedules) {
+    const container = document.getElementById('scheduler-tasks');
+    schedules.forEach(schedule => {
+        // Create dynamic UI elements for each task
+    });
+}
+```
+
+**Results**:
+- ✅ WhatsApp webhook URL now displays correctly (`http://test:8192/send-group-message`)
+- ✅ All scheduler tasks dynamically populated in UI
+- ✅ Both "Daily Report" (08:00) and "5-Minute Image Report" (every 5 minutes) visible
+- ✅ Individual task settings (enabled status, chart inclusion, image sending) properly displayed
+- ✅ JavaScript errors resolved with proper function scope and null checks
+- ✅ Configuration loads successfully without runtime errors
+
+**Files Modified**:
+- `src/server.js` - Removed webhook URL filtering from API response
+- `src/public/config.html` - Redesigned reporting settings section with dynamic scheduler tasks container
+- `src/public/config.js` - Added dynamic scheduler task population, enhanced error handling, and fixed function scope issues
+
+**Verification**: API response confirmed to include webhook URL and both scheduler tasks are properly displayed in the UI with their individual settings.
+
+---
+
+## 2025-08-16 15:18:42 WIB - External JavaScript Implementation
+
+### Issue Resolution
+Persistent reload functionality issues resolved by implementing external JavaScript file approach for complete CSP compliance.
+
+### Problems Identified
+- Inline JavaScript still causing CSP violations despite previous fixes
+- `script-src 'self'` policy requires external file approach
+- Reload functionality remained non-functional due to CSP restrictions
+
+### Solutions Implemented
+1. **External JavaScript File**: Created `src/public/config.js` with all JavaScript functionality
+2. **HTML Cleanup**: Removed all inline JavaScript from `config.html`
+3. **Server Route**: Added `/config.js` route in `server.js` to serve JavaScript file
+4. **Proper Headers**: Set `Content-Type: application/javascript` for external script
+
+### Technical Changes
+- **Created**: `src/public/config.js` - Complete JavaScript functionality
+- **Modified**: `src/public/config.html` - Replaced inline script with external reference
+- **Modified**: `src/server.js` - Added route for serving config.js
+
+### Testing Results
+- ✅ External JavaScript file served correctly (HTTP 200, proper Content-Type)
+- ✅ No CSP violations in browser console
+- ✅ Configuration API responding properly
+- ✅ Complete separation of concerns achieved
+
+### Security Improvements
+- Full CSP compliance with `script-src 'self'` policy
+- No inline JavaScript execution
+- Proper content type headers for security
+- Clean separation of HTML and JavaScript code
+
 **Deliverables**:
 - `src/public/config.html` - Complete configuration UI
-- Updated `server.js` with `/config` route handler
+- `src/public/config.js` - External JavaScript functionality
+- Updated `server.js` with `/config` and `/config.js` route handlers
 - Fully functional web interface for system configuration
 
 **Conclusion**: Configuration UI successfully implemented and tested. Users can now manage all system settings through an intuitive web interface accessible at `url:port/config`.
