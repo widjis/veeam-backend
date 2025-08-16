@@ -216,7 +216,7 @@ function populateSchedulerTasks(schedules) {
     schedules.forEach((schedule, index) => {
         const taskDiv = document.createElement('div');
         taskDiv.className = 'scheduler-task';
-        taskDiv.style.cssText = 'border: 1px solid #ddd; padding: 15px; margin: 10px 0; border-radius: 5px; background: #f9f9f9;';
+        taskDiv.style.cssText = 'border: 1px solid #ddd; padding: 15px; margin: 10px 0; border-radius: 5px; background: #f9f9f9; position: relative;';
         
         const cronTime = extractTimeFromCron(schedule.cronExpression);
         const cronDescription = getCronDescription(schedule.cronExpression);
@@ -224,11 +224,19 @@ function populateSchedulerTasks(schedules) {
         taskDiv.innerHTML = `
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
                 <h5 style="margin: 0; color: #333;">${schedule.name}</h5>
-                <div class="checkbox-group">
-                    <input type="checkbox" id="schedule-${index}-enabled" 
-                           name="reporting.schedules.${index}.enabled" 
-                           ${schedule.enabled ? 'checked' : ''}>
-                    <label for="schedule-${index}-enabled">Enabled</label>
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="schedule-${index}-enabled" 
+                               name="reporting.schedules.${index}.enabled" 
+                               ${schedule.enabled ? 'checked' : ''}>
+                        <label for="schedule-${index}-enabled">Enabled</label>
+                    </div>
+                    <div style="display: flex; gap: 5px;">
+                        <button type="button" class="edit-schedule-btn" data-schedule-name="${schedule.name}" 
+                                style="background: #28a745; color: white; border: none; padding: 4px 8px; border-radius: 3px; cursor: pointer; font-size: 12px;">✏️ Edit</button>
+                        <button type="button" class="delete-schedule-btn" data-schedule-name="${schedule.name}" 
+                                style="background: #dc3545; color: white; border: none; padding: 4px 8px; border-radius: 3px; cursor: pointer; font-size: 12px;">🗑️ Delete</button>
+                    </div>
                 </div>
             </div>
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 10px;">
@@ -263,6 +271,269 @@ function populateSchedulerTasks(schedules) {
         
         container.appendChild(taskDiv);
     });
+    
+    // Add event listeners for edit and delete buttons
+    addSchedulerTaskEventListeners();
+}
+
+// Add event listeners for scheduler task CRUD operations
+function addSchedulerTaskEventListeners() {
+    // Add new schedule button
+    const addBtn = document.getElementById('add-schedule-btn');
+    if (addBtn) {
+        addBtn.addEventListener('click', () => {
+            openScheduleModal();
+        });
+    }
+    
+    // Edit schedule buttons
+    document.querySelectorAll('.edit-schedule-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const scheduleName = e.target.getAttribute('data-schedule-name');
+            editSchedule(scheduleName);
+        });
+    });
+    
+    // Delete schedule buttons
+    document.querySelectorAll('.delete-schedule-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const scheduleName = e.target.getAttribute('data-schedule-name');
+            confirmDeleteSchedule(scheduleName);
+        });
+    });
+    
+    // Modal close buttons
+    document.querySelectorAll('.close').forEach(btn => {
+        btn.addEventListener('click', closeModals);
+    });
+    
+    // Cancel buttons
+    const cancelScheduleBtn = document.getElementById('cancel-schedule');
+    if (cancelScheduleBtn) {
+        cancelScheduleBtn.addEventListener('click', closeModals);
+    }
+    
+    const cancelDeleteBtn = document.getElementById('cancel-delete');
+    if (cancelDeleteBtn) {
+        cancelDeleteBtn.addEventListener('click', closeModals);
+    }
+    
+    // Modal background click to close
+    document.querySelectorAll('.modal').forEach(modal => {
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                closeModals();
+            }
+        });
+    });
+    
+    // Save schedule form submission
+    const scheduleForm = document.getElementById('schedule-form');
+    if (scheduleForm) {
+        scheduleForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            saveSchedule();
+        });
+    }
+    
+    // Confirm delete button
+    const confirmDeleteBtn = document.getElementById('confirm-delete');
+    if (confirmDeleteBtn) {
+        confirmDeleteBtn.addEventListener('click', deleteSchedule);
+    }
+}
+
+// Open schedule modal for creating new schedule
+function openScheduleModal(schedule = null) {
+    const modal = document.getElementById('schedule-modal');
+    const title = document.getElementById('modal-title');
+    const form = document.getElementById('schedule-form');
+    
+    if (schedule) {
+        title.textContent = 'Edit Schedule';
+        document.getElementById('schedule-name').value = schedule.name;
+        document.getElementById('schedule-cron').value = schedule.cronExpression;
+        document.getElementById('schedule-type').value = schedule.type || 'custom';
+        document.getElementById('schedule-enabled').checked = schedule.enabled;
+        document.getElementById('schedule-charts').checked = schedule.includeCharts;
+        document.getElementById('schedule-image').checked = schedule.sendAsImage;
+        document.getElementById('schedule-recipients').value = schedule.recipients ? schedule.recipients.join(',') : '';
+        form.setAttribute('data-editing', schedule.name);
+    } else {
+        title.textContent = 'Add New Schedule';
+        form.reset();
+        form.removeAttribute('data-editing');
+    }
+    
+    modal.style.display = 'block';
+}
+
+// Edit existing schedule
+async function editSchedule(scheduleName) {
+    try {
+        const response = await fetch(`/api/schedules/${encodeURIComponent(scheduleName)}`);
+        if (response.ok) {
+            const schedule = await response.json();
+            openScheduleModal(schedule);
+        } else {
+            showNotification('Failed to load schedule details', 'error');
+        }
+    } catch (error) {
+        console.error('Error loading schedule:', error);
+        showNotification('Error loading schedule details', 'error');
+    }
+}
+
+// Save schedule (create or update)
+async function saveSchedule() {
+    const form = document.getElementById('schedule-form');
+    const formData = new FormData(form);
+    const editingName = form.getAttribute('data-editing');
+    
+    const scheduleData = {
+        name: formData.get('name'),
+        cronExpression: formData.get('cronExpression'),
+        type: formData.get('type'),
+        enabled: formData.has('enabled'),
+        includeCharts: formData.has('includeCharts'),
+        sendAsImage: formData.has('sendAsImage')
+    };
+    
+    // Validate required fields
+    if (!scheduleData.name || !scheduleData.cronExpression) {
+        showNotification('Please fill in all required fields', 'error');
+        return;
+    }
+    
+    // Validate cron expression format
+    if (!isValidCronExpression(scheduleData.cronExpression)) {
+        showNotification('Invalid cron expression format', 'error');
+        return;
+    }
+    
+    try {
+        let response;
+        if (editingName) {
+            // Update existing schedule
+            response = await fetch(`/api/schedules/${encodeURIComponent(editingName)}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(scheduleData)
+            });
+        } else {
+            // Create new schedule
+            response = await fetch('/api/schedules', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(scheduleData)
+            });
+        }
+        
+        if (response.ok) {
+            showNotification(`Schedule ${editingName ? 'updated' : 'created'} successfully`, 'success');
+            closeModals();
+            // Refresh the scheduler tasks display
+             loadConfiguration();
+        } else {
+            const error = await response.text();
+            showNotification(`Failed to ${editingName ? 'update' : 'create'} schedule: ${error}`, 'error');
+        }
+    } catch (error) {
+        console.error('Error saving schedule:', error);
+        showNotification('Error saving schedule', 'error');
+    }
+}
+
+// Confirm delete schedule
+function confirmDeleteSchedule(scheduleName) {
+    const modal = document.getElementById('delete-modal');
+    const nameSpan = document.getElementById('delete-schedule-name');
+    nameSpan.textContent = scheduleName;
+    modal.style.display = 'block';
+    modal.setAttribute('data-schedule-name', scheduleName);
+}
+
+// Delete schedule
+async function deleteSchedule() {
+    const modal = document.getElementById('delete-modal');
+    const scheduleName = modal.getAttribute('data-schedule-name');
+    
+    try {
+        const response = await fetch(`/api/schedules/${encodeURIComponent(scheduleName)}`, {
+            method: 'DELETE'
+        });
+        
+        if (response.ok) {
+            showNotification('Schedule deleted successfully', 'success');
+            closeModals();
+            // Refresh the scheduler tasks display
+             loadConfiguration();
+        } else {
+            const error = await response.text();
+            showNotification(`Failed to delete schedule: ${error}`, 'error');
+        }
+    } catch (error) {
+        console.error('Error deleting schedule:', error);
+        showNotification('Error deleting schedule', 'error');
+    }
+}
+
+// Close all modals
+function closeModals() {
+    document.querySelectorAll('.modal').forEach(modal => {
+        modal.style.display = 'none';
+    });
+}
+
+// Validate cron expression format
+function isValidCronExpression(cron) {
+    // Basic cron validation - should have 5 or 6 parts
+    const parts = cron.trim().split(/\s+/);
+    return parts.length === 5 || parts.length === 6;
+}
+
+// Show notification
+function showNotification(message, type = 'info') {
+    // Create notification element if it doesn't exist
+    let notification = document.getElementById('notification');
+    if (!notification) {
+        notification = document.createElement('div');
+        notification.id = 'notification';
+        notification.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 15px 20px;
+            border-radius: 5px;
+            color: white;
+            font-weight: bold;
+            z-index: 10000;
+            max-width: 300px;
+            word-wrap: break-word;
+        `;
+        document.body.appendChild(notification);
+    }
+    
+    // Set notification style based on type
+    const colors = {
+        success: '#28a745',
+        error: '#dc3545',
+        warning: '#ffc107',
+        info: '#17a2b8'
+    };
+    
+    notification.style.backgroundColor = colors[type] || colors.info;
+    notification.textContent = message;
+    notification.style.display = 'block';
+    
+    // Auto-hide after 5 seconds
+    setTimeout(() => {
+        notification.style.display = 'none';
+    }, 5000);
 }
 
 function getCronDescription(cronExpression) {

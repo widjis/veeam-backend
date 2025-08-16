@@ -632,6 +632,40 @@ SERVER_HOST=0.0.0.0
 
 ## Recent Changes
 
+### CRUD Operations for Scheduler Tasks (August 16, 2025)
+- **Full CRUD Functionality:** Implemented complete Create, Read, Update, Delete operations for scheduler tasks
+- **Modal-Based Interface:** Added intuitive modal dialogs for creating and editing scheduler tasks
+- **Enhanced API Endpoints:** Improved `/api/schedules` endpoints with full CRUD support and validation
+- **Real-time Updates:** Dynamic refresh of scheduler task list after operations
+- **Form Validation:** Comprehensive validation for schedule names, cron expressions, and required fields
+- **User Feedback:** Toast notifications for success/error states during operations
+- **Delete Confirmation:** Safety dialogs to prevent accidental schedule deletions
+
+**Bug Fixes & Debugging (2025-08-16 15:47):**
+- ✅ **URL Encoding Fix:** Resolved 404 errors when editing schedules with spaces in names by adding proper `decodeURIComponent()` handling
+- ✅ **DOM Element Fix:** Fixed JavaScript errors by correcting HTML element ID mismatches
+- ✅ **Event Listener Fix:** Resolved modal interaction issues by properly wiring event handlers
+- ✅ **API Verification:** Confirmed all CRUD endpoints work correctly with comprehensive testing
+
+**Modal Fixes & Port Configuration (2025-08-16 15:57):**
+- ✅ **Modal JavaScript Fix:** Resolved `TypeError: Cannot read properties of null` errors in create/edit modals
+- ✅ **Element Reference Fix:** Corrected `schedule-title` to `modal-title` element ID mismatch
+- ✅ **Recipients Field:** Added proper population of recipients field in edit mode
+- ✅ **Environment Port Config:** Made server port fully configurable via `SERVER_PORT` environment variable
+- ✅ **Docker Integration:** Updated Dockerfile and docker-compose.yml for dynamic port configuration
+- ✅ **Backward Compatibility:** Maintains default port 3000 when no environment variable is set
+
+**New Features:**
+- Add new scheduler tasks with custom cron expressions
+- Edit existing scheduler tasks with pre-populated form data
+- Delete scheduler tasks with confirmation dialogs
+- Cron expression validation and format checking
+- Schedule name uniqueness validation
+- Error handling for API failures
+- Configurable port deployment via environment variables
+
+**Status:** 🟢 **Fully Operational** - All CRUD functionality tested and working correctly
+
 ### 2025-08-16 - Configuration Interface Improvements
 
 **Fixed Configuration Loading Issues:**
@@ -649,9 +683,9 @@ SERVER_HOST=0.0.0.0
 - Fixed function accessibility issues in configuration JavaScript
 
 **Files Updated:**
-- `src/server.js` - API response security adjustments
-- `src/public/config.html` - Dynamic scheduler tasks UI
-- `src/public/config.js` - Enhanced error handling and dynamic population
+- `src/server.js` - API response security adjustments and enhanced scheduler endpoints
+- `src/public/config.html` - Dynamic scheduler tasks UI and CRUD modal dialogs
+- `src/public/config.js` - Enhanced error handling, dynamic population, and CRUD operations
 
 ## Support
 

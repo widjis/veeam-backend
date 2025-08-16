@@ -270,8 +270,8 @@ class ConfigManager {
                 enableFile: true
             },
             server: {
-                port: 3000,
-                host: 'localhost',
+                port: parseInt(process.env.SERVER_PORT) || 3000,
+                host: process.env.SERVER_HOST || 'localhost',
                 cors: {
                     enabled: true,
                     origin: '*'

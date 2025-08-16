@@ -6,10 +6,12 @@ services:
     container_name: veeam-backend
     restart: unless-stopped
     ports:
-      - "3000:3000"
+      - "${SERVER_PORT:-3000}:${SERVER_PORT:-3000}"
     environment:
       - NODE_ENV=production
       - TZ=UTC
+      - SERVER_PORT=${SERVER_PORT:-3000}
+      - SERVER_HOST=${SERVER_HOST:-0.0.0.0}
     env_file:
       - .env
     volumes:
@@ -17,7 +19,7 @@ services:
       - ./data:/app/data
       - ./config:/app/config
     healthcheck:
-      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000/health', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) }).on('error', () => process.exit(1))"]
+      test: ["CMD", "node", "-e", "const port = process.env.SERVER_PORT || 3000; require('http').get('http://localhost:' + port + '/health', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) }).on('error', () => process.exit(1))"]
       interval: 30s
       timeout: 10s
       retries: 3

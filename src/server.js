@@ -478,8 +478,9 @@ class VeeamBackendServer {
 
         router.get('/schedules/:name', async (req, res, next) => {
             try {
+                const scheduleName = decodeURIComponent(req.params.name);
                 const schedules = this.configManager.get('reporting.schedules') || [];
-                const schedule = schedules.find(s => s.name === req.params.name);
+                const schedule = schedules.find(s => s.name === scheduleName);
                 if (!schedule) {
                     return res.status(404).json({ error: 'Schedule not found' });
                 }
