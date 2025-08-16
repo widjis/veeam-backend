@@ -568,9 +568,11 @@ function populateSchedulerTasks(schedules) {
 
 **1. Permission Issue Resolution**
 - **Issue**: `EACCES: permission denied` error when accessing `/app/config/config.json` in Docker container
-- **Root Cause**: The `veeam` user lacked write permissions to the config directory
-- **Fix**: Added explicit permission setting with `chmod -R 755 /app/config` in Dockerfile
-- **Enhanced config.json handling**: Added `touch /app/config/config.json` to create the file with proper ownership (`veeam:nodejs`) and permissions (`644`)
+- **Root Cause**: The `veeam` user lacked write permissions to the config directory and config file
+- **Fix**: Updated Dockerfile with write-enabled permissions:
+  - Config directory: `chmod 775` (group write access)
+  - Config file: `chmod 664` (group write access)
+- **Enhanced config.json handling**: Added `touch /app/config/config.json` to create the file with proper ownership (`veeam:nodejs`)
 - **Additional**: Ensured proper ownership is set after copying all application files
 - **Rebuild Required**: Users experiencing permission errors should rebuild with `docker compose build --no-cache && docker compose up -d`
 
