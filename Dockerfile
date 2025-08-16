@@ -17,8 +17,12 @@ COPY . .
 RUN addgroup -g 1001 -S nodejs
 RUN adduser -S veeam -u 1001
 
-# Change ownership of app directory
+# Change ownership of app directory (after copying files)
 RUN chown -R veeam:nodejs /app
+
+# Ensure config directory has proper permissions
+RUN chmod -R 755 /app/config
+
 USER veeam
 
 # Expose port (default 3000, configurable via SERVER_PORT env var)
