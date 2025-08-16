@@ -654,6 +654,10 @@ SERVER_HOST=0.0.0.0
 - ✅ **Environment Port Config:** Made server port fully configurable via `SERVER_PORT` environment variable
 - ✅ **Docker Integration:** Updated Dockerfile and docker-compose.yml for dynamic port configuration
 - ✅ **Backward Compatibility:** Maintains default port 3000 when no environment variable is set
+- ✅ **Docker Permission Fix:** Resolved `EACCES: permission denied` error when accessing `/app/config/config.json`
+- ✅ **File Ownership:** Added explicit permission setting (`chmod -R 755 /app/config`) in Dockerfile
+- ✅ **Enhanced Config Handling:** Creates file with proper ownership (`veeam:nodejs`) and permissions (`644`)
+- ⚠️ **Important:** If experiencing permission errors, rebuild with: `docker compose build --no-cache && docker compose up -d`
 
 **New Features:**
 - Add new scheduler tasks with custom cron expressions

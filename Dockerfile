@@ -20,8 +20,9 @@ RUN adduser -S veeam -u 1001
 # Change ownership of app directory (after copying files)
 RUN chown -R veeam:nodejs /app
 
-# Ensure config directory has proper permissions
+# Ensure config directory has proper permissions and create config.json if it doesn't exist
 RUN chmod -R 755 /app/config
+RUN touch /app/config/config.json && chown veeam:nodejs /app/config/config.json && chmod 644 /app/config/config.json
 
 USER veeam
 

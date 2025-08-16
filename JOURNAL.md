@@ -564,10 +564,21 @@ function populateSchedulerTasks(schedules) {
 - **Health Check**: Updated to use dynamic port from environment
 - **Default Values**: Maintains backward compatibility with port 3000
 
+### Docker Permission Fix:
+
+**1. Permission Issue Resolution**
+- **Issue**: `EACCES: permission denied` error when accessing `/app/config/config.json` in Docker container
+- **Root Cause**: The `veeam` user lacked write permissions to the config directory
+- **Fix**: Added explicit permission setting with `chmod -R 755 /app/config` in Dockerfile
+- **Enhanced config.json handling**: Added `touch /app/config/config.json` to create the file with proper ownership (`veeam:nodejs`) and permissions (`644`)
+- **Additional**: Ensured proper ownership is set after copying all application files
+- **Rebuild Required**: Users experiencing permission errors should rebuild with `docker compose build --no-cache && docker compose up -d`
+
 ### Status: ✅ **COMPLETED**
 - Modal functionality fully operational (Create/Edit/Delete)
 - Port configuration fully environment-driven
 - Docker deployment ready with configurable ports
+- Docker permission issues resolved
 - All CRUD operations tested and working
 
 ---
