@@ -186,6 +186,11 @@ class VeeamBackendServer {
             res.sendFile(path.join(__dirname, 'public', 'config.html'));
         });
 
+        // Favicon
+        this.app.get('/favicon.ico', (req, res) => {
+            res.sendFile(path.join(__dirname, 'public', 'favicon.ico'));
+        });
+
         // API routes
         this.app.use('/api', this.createApiRoutes());
         
