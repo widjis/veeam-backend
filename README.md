@@ -12,6 +12,44 @@ A comprehensive Node.js backend server for monitoring Veeam Backup & Replication
 - 📈 **Performance Monitoring** - System health scoring and trend analysis
 - 🛡️ **Comprehensive Error Handling** - Robust logging and monitoring
 - 🔐 **OAuth2 Authentication** - Secure Veeam API integration
+- 🔌 **RESTful API** - Complete API with 25+ endpoints for integration
+- 📖 **Comprehensive Documentation** - Detailed API documentation with examples
+
+## 📚 API Documentation
+
+For complete API documentation with detailed examples, request/response schemas, and integration guides, see:
+
+**[📖 API_DOCUMENTATION.md](./API_DOCUMENTATION.md)**
+
+The API provides 25+ endpoints covering:
+- Health monitoring and status checks
+- Configuration management
+- Data collection (jobs, repositories, sessions)
+- Report generation and delivery
+- Alert management and acknowledgment
+- Schedule management (CRUD operations)
+- Service connectivity testing
+
+### Quick API Examples
+
+```bash
+# Check server health
+curl http://localhost:3000/health
+
+# Get daily report
+curl http://localhost:3000/api/reports/daily
+
+# Send report via WhatsApp
+curl -X POST http://localhost:3000/api/reports/send \
+  -H "Content-Type: application/json" \
+  -d '{"format": "text", "includeImage": true}'
+
+# Get active alerts
+curl http://localhost:3000/api/alerts
+
+# Test Veeam connectivity
+curl -X POST http://localhost:3000/api/test/veeam
+```
 
 ## Architecture
 

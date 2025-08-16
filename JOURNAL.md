@@ -226,6 +226,75 @@ The following tasks are planned for future implementation to create a comprehens
 2. **Server Logic (`src/server.js`):**
    - Updated `executeScheduledReport` method to check `sendAsImage` flag
    - Uses `whatsappService.sendDailyReportWithImage(report)` when enabled
+
+### Comprehensive API Documentation - CREATED ✅
+
+**Date:** August 16, 2025 - 14:48 WIB
+
+**Successfully Created Complete API Documentation:**
+- ✅ Created `API_DOCUMENTATION.md` with comprehensive endpoint documentation
+- ✅ Documented all 25+ API endpoints with detailed examples
+- ✅ Included request/response schemas for all endpoints
+- ✅ Added error handling examples and HTTP status codes
+- ✅ Provided cURL examples for every endpoint
+- ✅ Documented common use cases and integration patterns
+
+**Documentation Sections:**
+
+1. **Health & Status Endpoints (3 endpoints):**
+   - `/health` - Server health check
+   - `/api/health/veeam` - Veeam API connectivity
+   - Rate limiting and error handling
+
+2. **Configuration Management (2 endpoints):**
+   - `GET /api/config` - Retrieve configuration
+   - `PUT /api/config/:section` - Update configuration sections
+
+3. **Data Collection Endpoints (3 endpoints):**
+   - `GET /api/data/jobs` - Backup jobs information
+   - `GET /api/data/repositories` - Repository status
+   - `GET /api/data/sessions` - Recent backup sessions
+
+4. **Reporting Endpoints (7 endpoints):**
+   - `GET /api/reports/daily` - Daily report generation
+   - `GET /api/reports/quick-status` - Quick status overview
+   - `GET /api/reports/html` - HTML formatted reports
+   - `GET /api/reports/download` - Downloadable reports
+   - `POST /api/reports/send` - WhatsApp report sending
+   - `POST /api/reports/send-image` - WhatsApp image reports
+   - `POST /api/reports/generate-image` - Image generation
+
+5. **Alerting Endpoints (3 endpoints):**
+   - `GET /api/alerts` - Active alerts retrieval
+   - `POST /api/alerts/:alertId/acknowledge` - Alert acknowledgment
+   - `GET /api/alerts/stats` - Alert statistics
+
+6. **Schedule Management (4 endpoints):**
+   - `GET /api/schedules` - List all schedules
+   - `GET /api/schedule/status` - Scheduler status
+   - `POST /api/schedules` - Create new schedule
+   - `DELETE /api/schedules/:name` - Remove schedule
+
+7. **Testing Endpoints (2 endpoints):**
+   - `POST /api/test/whatsapp` - WhatsApp connectivity test
+   - `POST /api/test/veeam` - Veeam API connectivity test
+
+8. **Static File Access:**
+   - `GET /reports/*` - Static report files serving
+
+**Key Features Documented:**
+- Complete request/response examples with JSON schemas
+- Error handling patterns and HTTP status codes
+- Rate limiting configuration (100 requests per 15 minutes)
+- Authentication requirements (currently none)
+- Common integration patterns and use cases
+- JavaScript code examples for dashboard integration
+- cURL examples for all endpoints
+- Troubleshooting and support information
+
+**File Location:** `/API_DOCUMENTATION.md`
+**Total Endpoints Documented:** 25+ endpoints
+**Documentation Size:** ~15,000+ characters with comprehensive examples
    - Fixed job management with `job.stop()` instead of `job.destroy()`
 
 3. **Schedule Configuration:**
