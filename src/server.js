@@ -181,6 +181,11 @@ class VeeamBackendServer {
             });
         });
 
+        // Configuration UI
+        this.app.get('/config', (req, res) => {
+            res.sendFile(path.join(__dirname, 'public', 'config.html'));
+        });
+
         // API routes
         this.app.use('/api', this.createApiRoutes());
         

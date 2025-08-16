@@ -13,6 +13,7 @@ A comprehensive Node.js backend server for monitoring Veeam Backup & Replication
 - 🛡️ **Comprehensive Error Handling** - Robust logging and monitoring
 - 🔐 **OAuth2 Authentication** - Secure Veeam API integration
 - 🔌 **RESTful API** - Complete API with 25+ endpoints for integration
+- 🖥️ **Web Configuration UI** - User-friendly web interface for system configuration
 - 📖 **Comprehensive Documentation** - Detailed API documentation with examples
 
 ## 📚 API Documentation
@@ -49,6 +50,35 @@ curl http://localhost:3000/api/alerts
 
 # Test Veeam connectivity
 curl -X POST http://localhost:3000/api/test/veeam
+```
+
+## 🖥️ Web Configuration Interface
+
+Access the intuitive web-based configuration interface at:
+
+**http://localhost:3000/config**
+
+The configuration UI provides:
+- **Visual Configuration Management** - Easy-to-use forms for all system settings
+- **Real-time Testing** - Built-in connectivity tests for Veeam and WhatsApp
+- **Section-based Organization** - Organized tabs for different configuration areas:
+  - Veeam API settings (server, credentials, SSL)
+  - WhatsApp integration (bot token, chat ID)
+  - Monitoring intervals and health checks
+  - Alerting thresholds and notification types
+  - Reporting schedules and recipients
+  - Server configuration (port, CORS, rate limiting)
+- **Responsive Design** - Works on desktop, tablet, and mobile devices
+- **Immediate Feedback** - Success/error indicators for all operations
+
+### Configuration Sections
+
+- **🔧 Veeam API**: Server URL, authentication, SSL verification
+- **💬 WhatsApp**: Bot configuration, message formatting
+- **📊 Monitoring**: Data collection intervals, health check settings
+- **🚨 Alerting**: Threshold configuration, notification preferences
+- **📋 Reporting**: Schedule management, recipient lists
+- **⚙️ Server**: Port settings, CORS, rate limiting, logging
 ```
 
 ## Architecture

@@ -1,0 +1,743 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Veeam Backend Configuration</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            opacity: 0.9;
+            font-size: 1.1em;
+        }
+
+        .content {
+            padding: 40px;
+        }
+
+        .section {
+            margin-bottom: 40px;
+            border: 1px solid #e0e0e0;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        .section-header {
+            background: #f8f9fa;
+            padding: 20px;
+            border-bottom: 1px solid #e0e0e0;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: background 0.3s;
+        }
+
+        .section-header:hover {
+            background: #e9ecef;
+        }
+
+        .section-header h3 {
+            color: #2c3e50;
+            font-size: 1.3em;
+        }
+
+        .section-content {
+            padding: 30px;
+            display: none;
+        }
+
+        .section.active .section-content {
+            display: block;
+        }
+
+        .section.active .toggle-icon {
+            transform: rotate(180deg);
+        }
+
+        .toggle-icon {
+            transition: transform 0.3s;
+            font-size: 1.2em;
+        }
+
+        .form-group {
+            margin-bottom: 25px;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #2c3e50;
+        }
+
+        input, select, textarea {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.3s, box-shadow 0.3s;
+        }
+
+        input:focus, select:focus, textarea:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .checkbox-group input[type="checkbox"] {
+            width: auto;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            margin-right: 15px;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+        }
+
+        .btn-success {
+            background: #28a745;
+        }
+
+        .btn-danger {
+            background: #dc3545;
+        }
+
+        .actions {
+            text-align: center;
+            padding: 30px;
+            border-top: 1px solid #e0e0e0;
+            background: #f8f9fa;
+        }
+
+        .status {
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: none;
+        }
+
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .help-text {
+            font-size: 12px;
+            color: #6c757d;
+            margin-top: 5px;
+        }
+
+        @media (max-width: 768px) {
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+            
+            .content {
+                padding: 20px;
+            }
+            
+            .header {
+                padding: 20px;
+            }
+            
+            .header h1 {
+                font-size: 2em;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔧 Veeam Backend Configuration</h1>
+            <p>Manage your Veeam monitoring and alerting system settings</p>
+        </div>
+
+        <div class="content">
+            <div id="status" class="status"></div>
+
+            <form id="configForm">
+                <!-- Veeam Configuration -->
+                <div class="section active">
+                    <div class="section-header" onclick="toggleSection(this)">
+                        <h3>🔌 Veeam API Configuration</h3>
+                        <span class="toggle-icon">▼</span>
+                    </div>
+                    <div class="section-content">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="veeam-baseUrl">Base URL</label>
+                                <input type="url" id="veeam-baseUrl" name="veeam.baseUrl" placeholder="https://your-veeam-server:9419/api/v1">
+                                <div class="help-text">Veeam Backup & Replication REST API endpoint</div>
+                            </div>
+                            <div class="form-group">
+                                <label for="veeam-timeout">Timeout (ms)</label>
+                                <input type="number" id="veeam-timeout" name="veeam.timeout" placeholder="30000">
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="veeam-username">Username</label>
+                                <input type="text" id="veeam-username" name="veeam.username" placeholder="veeam-username">
+                            </div>
+                            <div class="form-group">
+                                <label for="veeam-password">Password</label>
+                                <input type="password" id="veeam-password" name="veeam.password" placeholder="••••••••">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- WhatsApp Configuration -->
+                <div class="section">
+                    <div class="section-header" onclick="toggleSection(this)">
+                        <h3>📱 WhatsApp Integration</h3>
+                        <span class="toggle-icon">▼</span>
+                    </div>
+                    <div class="section-content">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="whatsapp-webhookUrl">Webhook URL</label>
+                                <input type="url" id="whatsapp-webhookUrl" name="whatsapp.webhookUrl" placeholder="http://your-webhook-server/send-message">
+                                <div class="help-text">WhatsApp webhook endpoint for sending messages</div>
+                            </div>
+                            <div class="form-group">
+                                <label for="whatsapp-chatId">Chat ID</label>
+                                <input type="text" id="whatsapp-chatId" name="whatsapp.chatId" placeholder="your-whatsapp-chat-id">
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="whatsapp-timeout">Timeout (ms)</label>
+                                <input type="number" id="whatsapp-timeout" name="whatsapp.timeout" placeholder="10000">
+                            </div>
+                            <div class="form-group">
+                                <label for="whatsapp-retryAttempts">Retry Attempts</label>
+                                <input type="number" id="whatsapp-retryAttempts" name="whatsapp.retryAttempts" placeholder="3">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Monitoring Configuration -->
+                <div class="section">
+                    <div class="section-header" onclick="toggleSection(this)">
+                        <h3>📊 Monitoring Settings</h3>
+                        <span class="toggle-icon">▼</span>
+                    </div>
+                    <div class="section-content">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="monitoring-dataCollectionInterval">Data Collection Interval (ms)</label>
+                                <input type="number" id="monitoring-dataCollectionInterval" name="monitoring.dataCollectionInterval" placeholder="300000">
+                                <div class="help-text">How often to collect data from Veeam (default: 5 minutes)</div>
+                            </div>
+                            <div class="form-group">
+                                <label for="monitoring-healthCheckInterval">Health Check Interval (ms)</label>
+                                <input type="number" id="monitoring-healthCheckInterval" name="monitoring.healthCheckInterval" placeholder="60000">
+                                <div class="help-text">How often to check system health (default: 1 minute)</div>
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="monitoring-memoryThreshold">Memory Threshold</label>
+                                <input type="number" step="0.01" min="0" max="1" id="monitoring-memoryThreshold" name="monitoring.memoryThreshold" placeholder="0.8">
+                                <div class="help-text">Memory usage threshold (0.8 = 80%)</div>
+                            </div>
+                            <div class="form-group">
+                                <label for="monitoring-cpuThreshold">CPU Threshold</label>
+                                <input type="number" step="0.01" min="0" max="1" id="monitoring-cpuThreshold" name="monitoring.cpuThreshold" placeholder="0.8">
+                                <div class="help-text">CPU usage threshold (0.8 = 80%)</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Alerting Configuration -->
+                <div class="section">
+                    <div class="section-header" onclick="toggleSection(this)">
+                        <h3>🚨 Alerting System</h3>
+                        <span class="toggle-icon">▼</span>
+                    </div>
+                    <div class="section-content">
+                        <div class="form-group">
+                            <div class="checkbox-group">
+                                <input type="checkbox" id="alerting-enabled" name="alerting.enabled">
+                                <label for="alerting-enabled">Enable Alerting System</label>
+                            </div>
+                        </div>
+                        
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="alerting-maxRetries">Max Retries</label>
+                                <input type="number" id="alerting-maxRetries" name="alerting.maxRetries" placeholder="5">
+                            </div>
+                            <div class="form-group">
+                                <label for="alerting-retryInterval">Retry Interval (ms)</label>
+                                <input type="number" id="alerting-retryInterval" name="alerting.retryInterval" placeholder="300000">
+                            </div>
+                        </div>
+
+                        <h4 style="margin: 25px 0 15px 0; color: #2c3e50;">Repository Thresholds</h4>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="alerting-repositoryUsageWarning">Warning Threshold (%)</label>
+                                <input type="number" min="0" max="100" id="alerting-repositoryUsageWarning" name="alerting.thresholds.repositoryUsage.warning" placeholder="70">
+                            </div>
+                            <div class="form-group">
+                                <label for="alerting-repositoryUsageCritical">Critical Threshold (%)</label>
+                                <input type="number" min="0" max="100" id="alerting-repositoryUsageCritical" name="alerting.thresholds.repositoryUsage.critical" placeholder="85">
+                            </div>
+                        </div>
+
+                        <h4 style="margin: 25px 0 15px 0; color: #2c3e50;">Health Score Thresholds</h4>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="alerting-healthScoreWarning">Warning Threshold</label>
+                                <input type="number" min="0" max="100" id="alerting-healthScoreWarning" name="alerting.thresholds.healthScore.warning" placeholder="70">
+                            </div>
+                            <div class="form-group">
+                                <label for="alerting-healthScoreCritical">Critical Threshold</label>
+                                <input type="number" min="0" max="100" id="alerting-healthScoreCritical" name="alerting.thresholds.healthScore.critical" placeholder="50">
+                            </div>
+                        </div>
+
+                        <h4 style="margin: 25px 0 15px 0; color: #2c3e50;">Job Duration Thresholds (hours)</h4>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="alerting-jobDurationWarning">Warning Duration</label>
+                                <input type="number" min="0" id="alerting-jobDurationWarning" name="alerting.thresholds.jobDuration.warning" placeholder="4">
+                            </div>
+                            <div class="form-group">
+                                <label for="alerting-jobDurationCritical">Critical Duration</label>
+                                <input type="number" min="0" id="alerting-jobDurationCritical" name="alerting.thresholds.jobDuration.critical" placeholder="8">
+                            </div>
+                        </div>
+
+                        <h4 style="margin: 25px 0 15px 0; color: #2c3e50;">Alert Types</h4>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <div class="checkbox-group">
+                                    <input type="checkbox" id="alerting-jobFailure" name="alerting.enabledAlerts.jobFailure">
+                                    <label for="alerting-jobFailure">Job Failure Alerts</label>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <div class="checkbox-group">
+                                    <input type="checkbox" id="alerting-repositoryUsage" name="alerting.enabledAlerts.repositoryUsage">
+                                    <label for="alerting-repositoryUsage">Repository Usage Alerts</label>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <div class="checkbox-group">
+                                    <input type="checkbox" id="alerting-systemHealth" name="alerting.enabledAlerts.systemHealth">
+                                    <label for="alerting-systemHealth">System Health Alerts</label>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <div class="checkbox-group">
+                                    <input type="checkbox" id="alerting-longRunningJob" name="alerting.enabledAlerts.longRunningJob">
+                                    <label for="alerting-longRunningJob">Long Running Job Alerts</label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Reporting Configuration -->
+                <div class="section">
+                    <div class="section-header" onclick="toggleSection(this)">
+                        <h3>📋 Reporting Settings</h3>
+                        <span class="toggle-icon">▼</span>
+                    </div>
+                    <div class="section-content">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="reporting-dailyReportTime">Daily Report Time</label>
+                                <input type="time" id="reporting-dailyReportTime" name="reporting.dailyReportTime" placeholder="08:00">
+                                <div class="help-text">Time to send daily reports (24-hour format)</div>
+                            </div>
+                            <div class="form-group">
+                                <label for="reporting-timezone">Timezone</label>
+                                <select id="reporting-timezone" name="reporting.timezone">
+                                    <option value="UTC">UTC</option>
+                                    <option value="America/New_York">Eastern Time</option>
+                                    <option value="America/Chicago">Central Time</option>
+                                    <option value="America/Denver">Mountain Time</option>
+                                    <option value="America/Los_Angeles">Pacific Time</option>
+                                    <option value="Europe/London">London</option>
+                                    <option value="Europe/Paris">Paris</option>
+                                    <option value="Asia/Tokyo">Tokyo</option>
+                                    <option value="Asia/Shanghai">Shanghai</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <div class="checkbox-group">
+                                    <input type="checkbox" id="reporting-includeCharts" name="reporting.includeCharts">
+                                    <label for="reporting-includeCharts">Include Charts in Reports</label>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <div class="checkbox-group">
+                                    <input type="checkbox" id="reporting-autoSend" name="reporting.autoSend">
+                                    <label for="reporting-autoSend">Auto-send Daily Reports</label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Server Configuration -->
+                <div class="section">
+                    <div class="section-header" onclick="toggleSection(this)">
+                        <h3>⚙️ Server Settings</h3>
+                        <span class="toggle-icon">▼</span>
+                    </div>
+                    <div class="section-content">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="server-port">Server Port</label>
+                                <input type="number" min="1" max="65535" id="server-port" name="server.port" placeholder="3000">
+                            </div>
+                            <div class="form-group">
+                                <label for="server-host">Server Host</label>
+                                <input type="text" id="server-host" name="server.host" placeholder="localhost">
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="logging-level">Log Level</label>
+                                <select id="logging-level" name="logging.level">
+                                    <option value="error">Error</option>
+                                    <option value="warn">Warning</option>
+                                    <option value="info">Info</option>
+                                    <option value="debug">Debug</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="logging-maxFiles">Max Log Files</label>
+                                <input type="number" min="1" id="logging-maxFiles" name="logging.maxFiles" placeholder="10">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+
+        <div class="actions">
+            <button type="button" class="btn" onclick="loadConfig()">🔄 Reload Configuration</button>
+            <button type="button" class="btn btn-success" onclick="saveConfig()">💾 Save Configuration</button>
+            <button type="button" class="btn btn-secondary" onclick="testConnections()">🔍 Test Connections</button>
+            <button type="button" class="btn btn-danger" onclick="resetConfig()">🔄 Reset to Defaults</button>
+        </div>
+    </div>
+
+    <script>
+        // Global configuration object
+        let currentConfig = {};
+
+        // Initialize page
+        document.addEventListener('DOMContentLoaded', function() {
+            loadConfig();
+        });
+
+        // Toggle section visibility
+        function toggleSection(header) {
+            const section = header.parentElement;
+            section.classList.toggle('active');
+        }
+
+        // Show status message
+        function showStatus(message, type = 'success') {
+            const statusEl = document.getElementById('status');
+            statusEl.textContent = message;
+            statusEl.className = `status ${type}`;
+            statusEl.style.display = 'block';
+            
+            setTimeout(() => {
+                statusEl.style.display = 'none';
+            }, 5000);
+        }
+
+        // Load current configuration
+        async function loadConfig() {
+            try {
+                const response = await fetch('/api/config');
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                currentConfig = await response.json();
+                populateForm(currentConfig);
+                showStatus('Configuration loaded successfully!', 'success');
+            } catch (error) {
+                console.error('Error loading config:', error);
+                showStatus('Failed to load configuration: ' + error.message, 'error');
+            }
+        }
+
+        // Populate form with configuration data
+        function populateForm(config) {
+            // Helper function to set nested values
+            function setValue(path, value) {
+                const element = document.querySelector(`[name="${path}"]`);
+                if (element) {
+                    if (element.type === 'checkbox') {
+                        element.checked = Boolean(value);
+                    } else {
+                        element.value = value || '';
+                    }
+                }
+            }
+
+            // Populate all configuration sections
+            if (config.veeam) {
+                setValue('veeam.baseUrl', config.veeam.baseUrl);
+                setValue('veeam.username', config.veeam.username);
+                setValue('veeam.password', config.veeam.password);
+                setValue('veeam.timeout', config.veeam.timeout);
+            }
+
+            if (config.whatsapp) {
+                setValue('whatsapp.webhookUrl', config.whatsapp.webhookUrl);
+                setValue('whatsapp.chatId', config.whatsapp.chatId);
+                setValue('whatsapp.timeout', config.whatsapp.timeout);
+                setValue('whatsapp.retryAttempts', config.whatsapp.retryAttempts);
+            }
+
+            if (config.monitoring) {
+                setValue('monitoring.dataCollectionInterval', config.monitoring.dataCollectionInterval);
+                setValue('monitoring.healthCheckInterval', config.monitoring.healthCheckInterval);
+                setValue('monitoring.memoryThreshold', config.monitoring.memoryThreshold);
+                setValue('monitoring.cpuThreshold', config.monitoring.cpuThreshold);
+            }
+
+            if (config.alerting) {
+                setValue('alerting.enabled', config.alerting.enabled);
+                setValue('alerting.maxRetries', config.alerting.maxRetries);
+                setValue('alerting.retryInterval', config.alerting.retryInterval);
+                
+                if (config.alerting.thresholds) {
+                    if (config.alerting.thresholds.repositoryUsage) {
+                        setValue('alerting.thresholds.repositoryUsage.warning', config.alerting.thresholds.repositoryUsage.warning);
+                        setValue('alerting.thresholds.repositoryUsage.critical', config.alerting.thresholds.repositoryUsage.critical);
+                    }
+                    if (config.alerting.thresholds.healthScore) {
+                        setValue('alerting.thresholds.healthScore.warning', config.alerting.thresholds.healthScore.warning);
+                        setValue('alerting.thresholds.healthScore.critical', config.alerting.thresholds.healthScore.critical);
+                    }
+                    if (config.alerting.thresholds.jobDuration) {
+                        setValue('alerting.thresholds.jobDuration.warning', config.alerting.thresholds.jobDuration.warning);
+                        setValue('alerting.thresholds.jobDuration.critical', config.alerting.thresholds.jobDuration.critical);
+                    }
+                }
+                
+                if (config.alerting.enabledAlerts) {
+                    setValue('alerting.enabledAlerts.jobFailure', config.alerting.enabledAlerts.jobFailure);
+                    setValue('alerting.enabledAlerts.repositoryUsage', config.alerting.enabledAlerts.repositoryUsage);
+                    setValue('alerting.enabledAlerts.systemHealth', config.alerting.enabledAlerts.systemHealth);
+                    setValue('alerting.enabledAlerts.longRunningJob', config.alerting.enabledAlerts.longRunningJob);
+                }
+            }
+
+            if (config.reporting) {
+                setValue('reporting.dailyReportTime', config.reporting.dailyReportTime);
+                setValue('reporting.timezone', config.reporting.timezone);
+                setValue('reporting.includeCharts', config.reporting.includeCharts);
+                setValue('reporting.autoSend', config.reporting.autoSend);
+            }
+
+            if (config.server) {
+                setValue('server.port', config.server.port);
+                setValue('server.host', config.server.host);
+            }
+
+            if (config.logging) {
+                setValue('logging.level', config.logging.level);
+                setValue('logging.maxFiles', config.logging.maxFiles);
+            }
+        }
+
+        // Save configuration
+        async function saveConfig() {
+            try {
+                const formData = new FormData(document.getElementById('configForm'));
+                const configSections = {};
+
+                // Group form data by section
+                for (let [key, value] of formData.entries()) {
+                    const parts = key.split('.');
+                    const section = parts[0];
+                    
+                    if (!configSections[section]) {
+                        configSections[section] = {};
+                    }
+                    
+                    // Handle nested properties
+                    let current = configSections[section];
+                    for (let i = 1; i < parts.length - 1; i++) {
+                        if (!current[parts[i]]) {
+                            current[parts[i]] = {};
+                        }
+                        current = current[parts[i]];
+                    }
+                    
+                    const finalKey = parts[parts.length - 1];
+                    const element = document.querySelector(`[name="${key}"]`);
+                    
+                    if (element.type === 'checkbox') {
+                        current[finalKey] = element.checked;
+                    } else if (element.type === 'number') {
+                        current[finalKey] = value ? Number(value) : undefined;
+                    } else {
+                        current[finalKey] = value || undefined;
+                    }
+                }
+
+                // Save each section
+                const savePromises = Object.entries(configSections).map(async ([section, data]) => {
+                    const response = await fetch(`/api/config/${section}`, {
+                        method: 'PUT',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(data)
+                    });
+                    
+                    if (!response.ok) {
+                        const error = await response.text();
+                        throw new Error(`Failed to save ${section}: ${error}`);
+                    }
+                    
+                    return response.json();
+                });
+
+                await Promise.all(savePromises);
+                showStatus('Configuration saved successfully!', 'success');
+                
+                // Reload to get updated config
+                setTimeout(() => loadConfig(), 1000);
+                
+            } catch (error) {
+                console.error('Error saving config:', error);
+                showStatus('Failed to save configuration: ' + error.message, 'error');
+            }
+        }
+
+        // Test connections
+        async function testConnections() {
+            try {
+                showStatus('Testing connections...', 'success');
+                
+                // Test Veeam connection
+                const veeamResponse = await fetch('/test/veeam', { method: 'POST' });
+                const veeamResult = await veeamResponse.json();
+                
+                // Test WhatsApp connection
+                const whatsappResponse = await fetch('/test/whatsapp', { method: 'POST' });
+                const whatsappResult = await whatsappResponse.json();
+                
+                let message = 'Connection Test Results:\n';
+                message += `Veeam API: ${veeamResult.success ? '✅ Connected' : '❌ Failed - ' + veeamResult.error}\n`;
+                message += `WhatsApp: ${whatsappResult.success ? '✅ Connected' : '❌ Failed - ' + whatsappResult.error}`;
+                
+                const allSuccess = veeamResult.success && whatsappResult.success;
+                showStatus(message, allSuccess ? 'success' : 'error');
+                
+            } catch (error) {
+                console.error('Error testing connections:', error);
+                showStatus('Failed to test connections: ' + error.message, 'error');
+            }
+        }
+
+        // Reset configuration
+        async function resetConfig() {
+            if (!confirm('Are you sure you want to reset all configuration to defaults? This action cannot be undone.')) {
+                return;
+            }
+            
+            try {
+                // This would require a reset endpoint in the API
+                showStatus('Reset functionality not implemented yet', 'error');
+            } catch (error) {
+                console.error('Error resetting config:', error);
+                showStatus('Failed to reset configuration: ' + error.message, 'error');
+            }
+        }
+    </script>
+</body>
+</html>
