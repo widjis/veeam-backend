@@ -576,6 +576,76 @@ function populateSchedulerTasks(schedules) {
 - **Additional**: Ensured proper ownership is set after copying all application files
 - **Rebuild Required**: Users experiencing permission errors should rebuild with `docker compose build --no-cache && docker compose up -d`
 
+## 2025-08-17 - Docker Build Fix (Directory Order)
+
+### Issue
+- Docker build failing with `chmod -R 775 /app/config` exit code 4294967295
+- Config directory doesn't exist when trying to set permissions
+- Build order issue: trying to chmod before directory creation
+
+### Root Cause
+- Dockerfile was creating directories after copying files
+- The `mkdir -p logs data config` command was running after `COPY . .`
+- This caused the config directory to not exist when chmod was executed
+
+### Solution
+- Reordered Dockerfile commands:
+  1. Copy application code first (`COPY . .`)
+  2. Then create necessary directories (`mkdir -p logs data config`)
+  3. Set permissions on existing directories
+- Maintained write-enabled permissions:
+  - Config directory: `chmod 775` (group write access)
+  - Config file: `chmod 664` (group write access)
+
+### Commands to Apply Fix
+```bash
+docker compose down
+docker compose build --no-cache
+docker compose up -d
+```
+
+### Status
+- ✅ Dockerfile command order fixed
+- ✅ Write permissions maintained
+- ⏳ Requires Docker container rebuild to apply changes
+
+## 2025-08-17 - Docker Entrypoint Script Solution
+
+### Issue
+- Permission errors persist despite Dockerfile fixes
+- `EACCES: permission denied` when opening `/app/config/config.json`
+- Static permission setting in Dockerfile may not be sufficient
+
+### Root Cause Analysis
+- Docker layer caching or volume mounts may override file permissions
+- Runtime permission issues not addressed by build-time fixes
+- Need dynamic permission setting at container startup
+
+### Solution
+- Created `docker-entrypoint.sh` script for runtime permission management
+- Script ensures:
+  1. Config directory exists with proper permissions (775)
+  2. Config.json file is created if missing
+  3. Proper ownership (veeam:nodejs) and permissions (664) are set at startup
+- Modified Dockerfile to use entrypoint script
+- Removed static permission commands from Dockerfile
+
+### Files Created/Modified
+- ✅ `docker-entrypoint.sh` - Runtime permission management script
+- ✅ `Dockerfile` - Updated to use entrypoint script
+
+### Commands to Apply Fix
+```bash
+docker compose down
+docker compose build --no-cache
+docker compose up -d
+```
+
+### Status
+- ✅ Entrypoint script created
+- ✅ Dockerfile updated with entrypoint
+- ⏳ Requires Docker container rebuild to apply changes
+
 ### Status: ✅ **COMPLETED**
 - Modal functionality fully operational (Create/Edit/Delete)
 - Port configuration fully environment-driven

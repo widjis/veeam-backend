@@ -659,23 +659,39 @@ SERVER_HOST=0.0.0.0
 - ✅ **Enhanced Config Handling:** Creates file with proper ownership (`veeam:nodejs`) and permissions (`664`) for group write
 - ⚠️ **Important:** If experiencing permission errors, rebuild with: `docker compose build --no-cache && docker compose up -d`
 
-## Docker Permission Fix
+## Docker Build & Permission Fix
 
 ### Issue Resolution
-Fixed `EACCES: permission denied` error when accessing `/app/config/config.json` in Docker container.
+Fixed Docker build failure and persistent `EACCES: permission denied` error when accessing `/app/config/config.json` in Docker container.
 
-### Root Cause
-The application's ConfigManager uses `fs.writeJson()` to save configuration changes, requiring write permissions that were not properly set.
+### Root Causes
+1. **Build Failure**: Dockerfile command order issue - trying to set permissions on non-existent directories
+2. **Permission Error**: ConfigManager uses `fs.writeJson()` requiring write permissions
+3. **Runtime Issues**: Static permission setting in Dockerfile insufficient for runtime scenarios
 
-### Changes Made
-- Updated Dockerfile with write-enabled permissions:
-  - Config directory: `chmod 775` (group write access)
-  - Config file: `chmod 664` (group write access)
-- Enhanced config.json handling with `touch /app/config/config.json` to create file with correct ownership (`veeam:nodejs`)
-- Ensured proper file ownership is set after copying application files
+### Comprehensive Solution
+- **Fixed Dockerfile command order**:
+  1. Copy application code first (`COPY . .`)
+  2. Create necessary directories (`mkdir -p logs data config`)
+  3. Set permissions on existing directories
+
+- **Implemented Runtime Permission Management**:
+  - Created `docker-entrypoint.sh` script for dynamic permission handling
+  - Script ensures config directory and file permissions at container startup
+  - Handles cases where volume mounts or layer caching override permissions
+
+- **Entrypoint Script Features**:
+  - Creates config directory with `775` permissions if missing
+  - Creates `config.json` file if it doesn't exist
+  - Sets proper ownership (`veeam:nodejs`) and permissions (`664`) at runtime
+  - Executes before application startup
+
+### Files Added/Modified
+- **`docker-entrypoint.sh`**: Runtime permission management script
+- **`Dockerfile`**: Updated to use entrypoint script approach
 
 ### Rebuild Required
-If you encounter permission errors, rebuild your Docker container:
+To apply these fixes, rebuild your Docker container:
 ```bash
 docker compose down
 docker compose build --no-cache

@@ -10,6 +10,10 @@ RUN npm ci --only=production && npm cache clean --force
 # Copy application code
 COPY . .
 
+# Copy and make entrypoint script executable
+COPY docker-entrypoint.sh /usr/local/bin/
+RUN chmod +x /usr/local/bin/docker-entrypoint.sh
+
 # Create necessary directories
 RUN mkdir -p logs data config
 
@@ -20,9 +24,8 @@ RUN adduser -S veeam -u 1001
 # Change ownership of app directory (after copying files)
 RUN chown -R veeam:nodejs /app
 
-# Ensure config directory has proper permissions and create config.json with write permissions
-RUN chmod -R 775 /app/config
-RUN touch /app/config/config.json && chown veeam:nodejs /app/config/config.json && chmod 664 /app/config/config.json
+# Set entrypoint
+ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
 
 USER veeam
 
