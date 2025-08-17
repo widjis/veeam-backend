@@ -17,6 +17,9 @@ RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 # Create necessary directories
 RUN mkdir -p logs data config
 
+# Install su-exec for user switching
+RUN apk add --no-cache su-exec
+
 # Create non-root user
 RUN addgroup -g 1001 -S nodejs
 RUN adduser -S veeam -u 1001
@@ -24,10 +27,8 @@ RUN adduser -S veeam -u 1001
 # Change ownership of app directory (after copying files)
 RUN chown -R veeam:nodejs /app
 
-# Set entrypoint
+# Set entrypoint (runs as root, switches to veeam user)
 ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
-
-USER veeam
 
 # Expose port (default 3000, configurable via SERVER_PORT env var)
 EXPOSE ${SERVER_PORT:-3000}

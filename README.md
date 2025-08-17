@@ -681,14 +681,24 @@ Fixed Docker build failure and persistent `EACCES: permission denied` error when
   - Handles cases where volume mounts or layer caching override permissions
 
 - **Entrypoint Script Features**:
+  - **Runs as root initially** to handle permission operations
   - Creates config directory with `775` permissions if missing
   - Creates `config.json` file if it doesn't exist
   - Sets proper ownership (`veeam:nodejs`) and permissions (`664`) at runtime
-  - Executes before application startup
+  - **Switches to non-root user** (`veeam`) before starting application for security
+  - Uses `su-exec` for secure user switching
+
+### Technical Implementation
+- **Root Privilege Requirement**: Entrypoint script needs root access to:
+  - Create directories and modify permissions
+  - Change file ownership (`chown` operations)
+  - Set proper file permissions (`chmod` operations)
+- **Security Maintained**: Application runs as non-root user after permission setup
+- **User Switching**: Uses `su-exec` package for clean user transition
 
 ### Files Added/Modified
-- **`docker-entrypoint.sh`**: Runtime permission management script
-- **`Dockerfile`**: Updated to use entrypoint script approach
+- **`docker-entrypoint.sh`**: Runtime permission management script with root execution
+- **`Dockerfile`**: Updated to use entrypoint script, added `su-exec` package, removed `USER` directive
 
 ### Rebuild Required
 To apply these fixes, rebuild your Docker container:

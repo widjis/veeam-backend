@@ -646,6 +646,45 @@ docker compose up -d
 - ✅ Dockerfile updated with entrypoint
 - ⏳ Requires Docker container rebuild to apply changes
 
+## 2025-08-17 23:32 - Root Permission Fix for Entrypoint
+
+### Issue
+- Entrypoint script failing with "Operation not permitted" errors
+- Script was running as `veeam` user but trying to modify root-owned directories
+- Commands like `chmod /app/config` and `chown` failing due to insufficient privileges
+
+### Root Cause Analysis
+- Dockerfile had `USER veeam` directive before entrypoint execution
+- Entrypoint script needs root privileges to:
+  1. Create directories with proper permissions
+  2. Change ownership of files/directories
+  3. Set file permissions
+- After permission setup, should switch to non-root user for security
+
+### Solution
+- **Updated entrypoint script**: Now uses `su-exec` to switch users after permission setup
+- **Modified Dockerfile**:
+  1. Removed `USER veeam` directive (entrypoint runs as root)
+  2. Added `su-exec` package installation
+  3. Entrypoint handles user switching with `exec su-exec veeam:nodejs "$@"`
+- **Security maintained**: Application still runs as non-root user after permission setup
+
+### Files Modified
+- ✅ `docker-entrypoint.sh` - Added root execution and user switching
+- ✅ `Dockerfile` - Removed USER directive, added su-exec package
+
+### Commands to Apply Fix
+```bash
+docker compose down
+docker compose build --no-cache
+docker compose up -d
+```
+
+### Status
+- ✅ Root permission handling implemented
+- ✅ User switching with su-exec configured
+- ⏳ Requires Docker container rebuild to apply changes
+
 ### Status: ✅ **COMPLETED**
 - Modal functionality fully operational (Create/Edit/Delete)
 - Port configuration fully environment-driven
