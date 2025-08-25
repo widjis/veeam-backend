@@ -153,6 +153,32 @@
             transform: translateY(-2px);
             box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
         }
+        
+        /* Section-specific save buttons */
+        .btn-section {
+            background: #28a745 !important;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            font-size: 14px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .btn-section:hover {
+            background: #218838 !important;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+        }
+        
+        .section-actions {
+            margin-top: 20px;
+            padding-top: 15px;
+            border-top: 1px solid #e0e0e0;
+            text-align: right;
+        }
 
         .btn-secondary {
             background: #6c757d;
@@ -243,7 +269,7 @@
                             </div>
                             <div class="form-group">
                                 <label for="veeam-timeout">Timeout (ms)</label>
-                                <input type="number" id="veeam-timeout" name="veeam.timeout" placeholder="30000">
+                                <input type="number" id="veeam-timeout" name="veeam.apiTimeout" placeholder="30000">
                             </div>
                         </div>
                         <div class="form-row">
@@ -255,6 +281,9 @@
                                 <label for="veeam-password">Password</label>
                                 <input type="password" id="veeam-password" name="veeam.password" placeholder="••••••••">
                             </div>
+                        </div>
+                        <div class="section-actions" style="margin-top: 20px; padding-top: 15px; border-top: 1px solid #e0e0e0; text-align: right;">
+                            <button type="button" class="btn btn-success btn-section" data-section="veeam" style="background: #28a745; padding: 10px 20px; font-size: 14px;">💾 Save Veeam Settings</button>
                         </div>
                     </div>
                 </div>
@@ -287,6 +316,9 @@
                                 <input type="number" id="whatsapp-retryAttempts" name="whatsapp.retryAttempts" placeholder="3">
                             </div>
                         </div>
+                        <div class="section-actions" style="margin-top: 20px; padding-top: 15px; border-top: 1px solid #e0e0e0; text-align: right;">
+                            <button type="button" class="btn btn-success btn-section" data-section="whatsapp" style="background: #28a745; padding: 10px 20px; font-size: 14px;">💾 Save WhatsApp Settings</button>
+                        </div>
                     </div>
                 </div>
 
@@ -300,26 +332,18 @@
                         <div class="form-row">
                             <div class="form-group">
                                 <label for="monitoring-dataCollectionInterval">Data Collection Interval (ms)</label>
-                                <input type="number" id="monitoring-dataCollectionInterval" name="monitoring.dataCollectionInterval" placeholder="300000">
+                                <input type="number" id="monitoring-dataCollectionInterval" name="monitoring.dataCollection.interval" placeholder="300000">
                                 <div class="help-text">How often to collect data from Veeam (default: 5 minutes)</div>
                             </div>
                             <div class="form-group">
                                 <label for="monitoring-healthCheckInterval">Health Check Interval (ms)</label>
-                                <input type="number" id="monitoring-healthCheckInterval" name="monitoring.healthCheckInterval" placeholder="60000">
+                                <input type="number" id="monitoring-healthCheckInterval" name="monitoring.healthCheck.interval" placeholder="60000">
                                 <div class="help-text">How often to check system health (default: 1 minute)</div>
                             </div>
                         </div>
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label for="monitoring-memoryThreshold">Memory Threshold</label>
-                                <input type="number" step="0.01" min="0" max="1" id="monitoring-memoryThreshold" name="monitoring.memoryThreshold" placeholder="0.8">
-                                <div class="help-text">Memory usage threshold (0.8 = 80%)</div>
-                            </div>
-                            <div class="form-group">
-                                <label for="monitoring-cpuThreshold">CPU Threshold</label>
-                                <input type="number" step="0.01" min="0" max="1" id="monitoring-cpuThreshold" name="monitoring.cpuThreshold" placeholder="0.8">
-                                <div class="help-text">CPU usage threshold (0.8 = 80%)</div>
-                            </div>
+
+                        <div class="section-actions" style="margin-top: 20px; padding-top: 15px; border-top: 1px solid #e0e0e0; text-align: right;">
+                            <button type="button" class="btn btn-success btn-section" data-section="monitoring" style="background: #28a745; padding: 10px 20px; font-size: 14px;">💾 Save Monitoring Settings</button>
                         </div>
                     </div>
                 </div>
@@ -341,11 +365,11 @@
                         <div class="form-row">
                             <div class="form-group">
                                 <label for="alerting-maxRetries">Max Retries</label>
-                                <input type="number" id="alerting-maxRetries" name="alerting.maxRetries" placeholder="5">
+                                <input type="number" id="alerting-maxRetries" name="alerting.retrySettings.maxRetries" placeholder="5">
                             </div>
                             <div class="form-group">
                                 <label for="alerting-retryInterval">Retry Interval (ms)</label>
-                                <input type="number" id="alerting-retryInterval" name="alerting.retryInterval" placeholder="300000">
+                                <input type="number" id="alerting-retryInterval" name="alerting.retrySettings.retryInterval" placeholder="300000">
                             </div>
                         </div>
 
@@ -389,13 +413,13 @@
                         <div class="form-row">
                             <div class="form-group">
                                 <div class="checkbox-group">
-                                    <input type="checkbox" id="alerting-jobFailure" name="alerting.enabledAlerts.jobFailure">
+                                    <input type="checkbox" id="alerting-jobFailure" name="alerting.alertTypes.jobFailure">
                                     <label for="alerting-jobFailure">Job Failure Alerts</label>
                                 </div>
                             </div>
                             <div class="form-group">
                                 <div class="checkbox-group">
-                                    <input type="checkbox" id="alerting-repositoryUsage" name="alerting.enabledAlerts.repositoryUsage">
+                                    <input type="checkbox" id="alerting-repositoryUsage" name="alerting.alertTypes.repositoryFull">
                                     <label for="alerting-repositoryUsage">Repository Usage Alerts</label>
                                 </div>
                             </div>
@@ -403,16 +427,19 @@
                         <div class="form-row">
                             <div class="form-group">
                                 <div class="checkbox-group">
-                                    <input type="checkbox" id="alerting-systemHealth" name="alerting.enabledAlerts.systemHealth">
+                                    <input type="checkbox" id="alerting-systemHealth" name="alerting.alertTypes.systemHealth">
                                     <label for="alerting-systemHealth">System Health Alerts</label>
                                 </div>
                             </div>
                             <div class="form-group">
                                 <div class="checkbox-group">
-                                    <input type="checkbox" id="alerting-longRunningJob" name="alerting.enabledAlerts.longRunningJob">
+                                    <input type="checkbox" id="alerting-longRunningJob" name="alerting.alertTypes.longRunningJob">
                                     <label for="alerting-longRunningJob">Long Running Job Alerts</label>
                                 </div>
                             </div>
+                        </div>
+                        <div class="section-actions" style="margin-top: 20px; padding-top: 15px; border-top: 1px solid #e0e0e0; text-align: right;">
+                            <button type="button" class="btn btn-success btn-section" data-section="alerting" style="background: #28a745; padding: 10px 20px; font-size: 14px;">💾 Save Alerting Settings</button>
                         </div>
                     </div>
                 </div>
@@ -437,6 +464,7 @@
                                     <option value="Europe/Paris">Paris</option>
                                     <option value="Asia/Tokyo">Tokyo</option>
                                     <option value="Asia/Shanghai">Shanghai</option>
+                                    <option value="Asia/Makassar">Morowali (WITA)</option>
                                 </select>
                             </div>
                         </div>
@@ -524,6 +552,9 @@
                                 </div>
                             </div>
                         </div>
+                        <div class="section-actions" style="margin-top: 20px; padding-top: 15px; border-top: 1px solid #e0e0e0; text-align: right;">
+                            <button type="button" class="btn btn-success btn-section" data-section="reporting" style="background: #28a745; padding: 10px 20px; font-size: 14px;">💾 Save Reporting Settings</button>
+                        </div>
                     </div>
                 </div>
 
@@ -558,6 +589,9 @@
                                 <label for="logging-maxFiles">Max Log Files</label>
                                 <input type="number" min="1" id="logging-maxFiles" name="logging.maxFiles" placeholder="10">
                             </div>
+                        </div>
+                        <div class="section-actions" style="margin-top: 20px; padding-top: 15px; border-top: 1px solid #e0e0e0; text-align: right;">
+                            <button type="button" class="btn btn-success btn-section" data-section="server" style="background: #28a745; padding: 10px 20px; font-size: 14px;">💾 Save Server Settings</button>
                         </div>
                     </div>
                 </div>

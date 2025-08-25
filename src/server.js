@@ -663,7 +663,7 @@ class VeeamBackendServer {
      */
     setupScheduledJobs() {
         // Clear existing jobs
-        this.scheduledJobs.forEach(job => job.stop());
+        this.scheduledJobs.forEach(job => job.destroy());
         this.scheduledJobs.clear();
 
         const schedules = this.configManager.get('reporting.schedules') || [];

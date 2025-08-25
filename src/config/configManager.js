@@ -386,11 +386,52 @@ class ConfigManager {
             throw new Error(`Configuration section '${section}' not found`);
         }
         
-        this.config[section] = { ...this.config[section], ...updates };
-        await this.saveConfig();
+        // Filter out empty or undefined values to preserve existing configuration
+        const filteredUpdates = this.filterEmptyValues(updates);
+        
+        // Merge updates into the section
+        const updatedSection = { ...this.config[section], ...filteredUpdates };
+        
+        // Validate only the specific section being updated
+        const sectionSchema = this.configSchema.extract(section);
+        const { error } = sectionSchema.validate(updatedSection, { allowUnknown: false });
+        
+        if (error) {
+            throw new Error(`Configuration validation failed for section '${section}': ${error.message}`);
+        }
+        
+        // Update the configuration and save to file without full validation
+        this.config[section] = updatedSection;
+        await fs.writeJson(this.configFile, this.config, { spaces: 2 });
+        this.logger.info(`Configuration section '${section}' saved successfully`);
         
         // Notify watchers
         this.notifyWatchers(section, this.config[section]);
+    }
+
+    /**
+     * Filter out empty or undefined values from an object
+     * @param {Object} obj - Object to filter
+     * @returns {Object} - Filtered object
+     */
+    filterEmptyValues(obj) {
+        const filtered = {};
+        
+        for (const [key, value] of Object.entries(obj)) {
+            if (value !== null && value !== undefined && value !== '') {
+                if (typeof value === 'object' && !Array.isArray(value)) {
+                    // Recursively filter nested objects
+                    const nestedFiltered = this.filterEmptyValues(value);
+                    if (Object.keys(nestedFiltered).length > 0) {
+                        filtered[key] = nestedFiltered;
+                    }
+                } else {
+                    filtered[key] = value;
+                }
+            }
+        }
+        
+        return filtered;
     }
 
     /**

@@ -44,6 +44,14 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     });
+    
+    // Add event listeners for section-specific save buttons
+    document.addEventListener('click', function(e) {
+        if (e.target.classList.contains('btn-section')) {
+            const section = e.target.getAttribute('data-section');
+            saveSectionConfig(section);
+        }
+    });
 });
 
 // Toggle section visibility
@@ -103,7 +111,7 @@ function populateForm(config) {
         setValue('veeam.username', config.veeam.username);
         setValue('veeam.password', config.veeam.password);
         setValue('veeam.rejectUnauthorized', config.veeam.rejectUnauthorized);
-        setValue('veeam.timeout', config.veeam.timeout);
+        setValue('veeam.apiTimeout', config.veeam.apiTimeout);
         setValue('veeam.retryAttempts', config.veeam.retryAttempts);
         setValue('veeam.retryDelay', config.veeam.retryDelay);
     }
@@ -437,7 +445,7 @@ async function saveSchedule() {
             showNotification(`Schedule ${editingName ? 'updated' : 'created'} successfully`, 'success');
             closeModals();
             // Refresh the scheduler tasks display
-             loadConfiguration();
+             loadConfig();
         } else {
             const error = await response.text();
             showNotification(`Failed to ${editingName ? 'update' : 'create'} schedule: ${error}`, 'error');
@@ -618,6 +626,98 @@ async function saveConfig() {
     } catch (error) {
         console.error('Error saving config:', error);
         showStatus('Failed to save configuration: ' + error.message, 'error');
+    }
+}
+
+// Save specific section configuration
+async function saveSectionConfig(sectionName) {
+    try {
+        showStatus(`Saving ${sectionName} configuration...`, 'success');
+        
+        // Collect form data for specific section
+        const formData = new FormData(document.getElementById('configForm'));
+        const sectionData = {};
+        
+        // Parse form data for the specific section only
+        for (let [key, value] of formData.entries()) {
+            if (key.startsWith(sectionName + '.')) {
+                const parts = key.split('.');
+                let current = sectionData;
+                
+                // Skip the section name part
+                for (let i = 1; i < parts.length - 1; i++) {
+                    if (!current[parts[i]]) {
+                        current[parts[i]] = {};
+                    }
+                    current = current[parts[i]];
+                }
+                
+                const lastPart = parts[parts.length - 1];
+                const element = document.querySelector(`[name="${key}"]`);
+                
+                if (element && element.type === 'checkbox') {
+                    current[lastPart] = element.checked;
+                } else if (element && element.type === 'number') {
+                    current[lastPart] = parseInt(value) || 0;
+                } else {
+                    current[lastPart] = value;
+                }
+            }
+        }
+        
+        // Convert numeric-keyed objects to arrays (e.g., schedules)
+        function convertObjectsToArrays(obj) {
+            if (typeof obj !== 'object' || obj === null) {
+                return obj;
+            }
+            
+            // Check if object has only numeric keys (should be converted to array)
+            const keys = Object.keys(obj);
+            const isNumericKeyed = keys.length > 0 && keys.every(key => /^\d+$/.test(key));
+            
+            if (isNumericKeyed) {
+                // Convert to array, maintaining order
+                const maxIndex = Math.max(...keys.map(Number));
+                const array = new Array(maxIndex + 1);
+                for (const [key, value] of Object.entries(obj)) {
+                    array[parseInt(key)] = convertObjectsToArrays(value);
+                }
+                return array.filter(item => item !== undefined); // Remove undefined elements
+            }
+            
+            // Recursively process nested objects
+            const result = {};
+            for (const [key, value] of Object.entries(obj)) {
+                result[key] = convertObjectsToArrays(value);
+            }
+            return result;
+        }
+        
+        // Apply conversion to section data
+        const processedSectionData = convertObjectsToArrays(sectionData);
+        
+        // Save the section
+        const response = await fetch(`/api/config/${sectionName}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(processedSectionData)
+        });
+        
+        if (!response.ok) {
+            const error = await response.text();
+            throw new Error(`Failed to save ${sectionName}: ${error}`);
+        }
+        
+        showStatus(`${sectionName} configuration saved successfully!`, 'success');
+        
+        // Update current config with saved data
+        currentConfig[sectionName] = { ...currentConfig[sectionName], ...processedSectionData };
+        
+    } catch (error) {
+        console.error(`Error saving ${sectionName} config:`, error);
+        showStatus(`Failed to save ${sectionName} configuration: ` + error.message, 'error');
     }
 }
 
