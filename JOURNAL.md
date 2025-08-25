@@ -98,6 +98,214 @@ To modify the polling intervals, edit the `config/config.json` file:
 ```json
 {
   "monitoring": {
+
+## August 25, 2025 - 20:55:01
+
+### Project Learning Session - Comprehensive System Analysis
+
+**Learning Objective:** Understanding the complete Veeam Backend Monitoring & Reporting System architecture, capabilities, and deployment readiness.
+
+#### 🏗️ **System Architecture Overview**
+
+**Core Technology Stack:**
+- **Backend Framework:** Node.js + Express.js
+- **API Integration:** Veeam Backup & Replication REST API v1
+- **Messaging:** WhatsApp webhook integration
+- **Scheduling:** Node-cron for automated tasks
+- **Reporting:** Puppeteer for HTML/PDF generation
+- **Authentication:** OAuth2 with token management
+- **Logging:** Winston with file and console outputs
+- **Configuration:** Hierarchical JSON-based config system
+
+**Service Architecture:**
+```
+src/services/
+├── veeamApiClient.js      # Veeam API integration with OAuth2
+├── dataCollectionService.js # Data collection and caching
+├── reportingEngine.js     # Report generation engine
+├── alertingService.js     # Real-time alert management
+├── whatsappService.js     # WhatsApp messaging service
+└── htmlReportService.js   # HTML/PDF report generation
+```
+
+#### 📊 **Core Capabilities Discovered**
+
+**1. Monitoring & Data Collection:**
+- Real-time backup job monitoring (every 5 minutes)
+- Repository usage tracking with thresholds
+- System health scoring and analytics
+- Performance trend analysis
+- Infrastructure issue detection
+
+**2. Alerting System:**
+- **5 Alert Types Monitored:**
+  - Job Failure Alerts (Warning: 3 failures, Critical: 5 failures)
+  - Repository Usage Alerts (Warning: 70%, Critical: 85%)
+  - System Health Alerts (Warning: 70/100, Critical: 50/100)
+  - Long Running Job Alerts (Warning: 4hrs, Critical: 8hrs)
+  - Infrastructure Issue Alerts
+- **Delivery:** WhatsApp group integration
+- **Retry Logic:** 3 attempts with escalation
+- **Auto-acknowledgment:** 24-hour timeout
+
+**3. Reporting Engine:**
+- **Automated Daily Reports** (8:00 AM UTC by default)
+- **Multiple Formats:** Text, HTML, PDF with charts
+- **Content Includes:**
+  - Performance metrics and health scores
+  - Storage analytics and capacity planning
+  - Job success/failure summaries
+  - Trend analysis and recommendations
+
+**4. RESTful API (25+ Endpoints):**
+- Health monitoring and status checks
+- Configuration management (CRUD)
+- Data collection endpoints (jobs, repositories, sessions)
+- Report generation and delivery
+- Alert management and acknowledgment
+- Schedule management
+- Service connectivity testing
+
+#### 🖥️ **Web Configuration Interface**
+
+**Access URL:** `http://localhost:3000/config`
+
+**Features:**
+- Visual configuration management with forms
+- Real-time connectivity testing (Veeam + WhatsApp)
+- Section-based organization:
+  - Veeam API settings (server, credentials, SSL)
+  - WhatsApp integration (bot token, chat ID)
+  - Monitoring intervals and health checks
+  - Alerting thresholds and notification types
+  - Reporting schedules and recipients
+  - Server configuration (port, CORS, rate limiting)
+- Responsive design (desktop/tablet/mobile)
+- Immediate feedback with success/error indicators
+
+#### 🐳 **Docker Deployment Readiness**
+
+**Status:** ✅ **FULLY READY FOR PRODUCTION DEPLOYMENT**
+
+**Docker Configuration:**
+- **Dockerfile:** Optimized with Alpine Linux, non-root user, health checks
+- **docker-compose.yml:** Production-ready with restart policies, volume mounts
+- **Security:** Non-root execution (UID: 1001), minimal attack surface
+- **Volumes:** Persistent data, logs, and configuration mounting
+- **Environment:** Complete .env.example with all required variables
+
+**Available Docker Commands:**
+```bash
+npm run docker:build          # Build Docker image
+npm run docker:run            # Run container with .env
+npm run docker:compose        # Start with docker-compose
+npm run docker:compose:down   # Stop docker-compose
+```
+
+#### ⚙️ **Configuration System**
+
+**Hierarchical Configuration:**
+1. Default configuration (`config/default-config.json`)
+2. Environment variables (`.env` file)
+3. Runtime configuration updates via API
+
+**Key Configuration Areas:**
+- **Veeam API:** Connection settings, authentication, timeouts
+- **WhatsApp:** Webhook URL, chat ID, retry settings
+- **Monitoring:** Data collection intervals (5 min default), health checks (1 min)
+- **Alerting:** Thresholds, retry logic, quiet hours
+- **Reporting:** Schedules, timezone, content options
+- **Logging:** Levels, file rotation, console output
+
+#### 🔧 **Development & Operations**
+
+**Available Scripts:**
+```bash
+npm start              # Production mode
+npm run dev            # Development with nodemon
+npm test               # Run test suite
+npm run pm2:start      # PM2 process management
+npm run lint           # ESLint code quality
+```
+
+**Monitoring Intervals:**
+- **Data Collection:** 300,000ms (5 minutes)
+- **Health Checks:** 60,000ms (1 minute)
+- **Alert Processing:** Every 5 minutes (tied to data collection)
+- **Retry Interval:** 300,000ms (5 minutes)
+
+#### 📈 **Production Features**
+
+**Reliability:**
+- Comprehensive error handling with Winston logging
+- Graceful shutdown procedures
+- Token management with automatic refresh
+- Rate limiting (100 requests/15 minutes)
+- Health check endpoints for monitoring
+
+**Security:**
+- HTTPS support with SSL verification options
+- Helmet.js security headers
+- CORS configuration
+- Non-root Docker execution
+- Environment variable protection
+
+**Scalability:**
+- Caching system for API responses
+- Batch processing for large datasets
+- Configurable timeouts and retries
+- PM2 process management support
+
+#### 🎯 **Key Learning Outcomes**
+
+1. **Enterprise-Grade System:** This is a production-ready, enterprise-level monitoring solution
+2. **Comprehensive Coverage:** Monitors all aspects of Veeam infrastructure
+3. **Modern Architecture:** Uses current Node.js best practices and patterns
+4. **Deployment Ready:** Fully containerized with Docker support
+5. **User-Friendly:** Web interface for easy configuration
+6. **Integration Ready:** RESTful API for external system integration
+7. **Reliable Operations:** Built-in retry logic, error handling, and monitoring
+
+**Next Steps for Frontend Development:**
+- The backend provides a solid foundation with 25+ API endpoints
+- Web configuration interface already exists at `/config`
+- RESTful API is well-documented and ready for frontend consumption
+- Real-time data available through polling endpoints
+- Authentication system can be extended for frontend security
+
+---
+
+## 2025-08-25 21:07:02 - Environment Configuration Retrieved
+
+### Docker Server Environment Setup
+
+**Objective**: Retrieved production .env configuration from Docker server for local development setup.
+
+**Actions Performed**:
+1. **Server Connection**: Successfully connected to Docker server (10.60.10.59) using SSH credentials
+2. **File Location**: Located veeam-backend project in `/root/veeam-backend/` directory
+3. **Environment File**: Found and copied `.env` file to local development environment
+4. **Configuration Analysis**: Reviewed production environment variables
+
+**Production Configuration Details**:
+- **Veeam API**: Connected to `https://10.60.10.128:9419/api/v1` with admin credentials
+- **WhatsApp Integration**: Configured for group messaging via `http://localhost:8192/send-group-message`
+- **Server Settings**: Running on port 3005 with production logging
+- **Monitoring Thresholds**: Repository (70%/85%), Health (70%/50%), Job Duration (4h/8h)
+- **Environment**: Production mode with comprehensive alerting enabled
+
+**Key Insights**:
+- Production system is fully configured with real Veeam infrastructure
+- WhatsApp integration is active for group notifications
+- Monitoring thresholds are set for enterprise-level alerting
+- System is configured for UTC timezone operations
+
+**Next Steps**:
+- Review and adapt configuration for local development needs
+- Ensure sensitive credentials are properly secured
+- Test connectivity with production Veeam API endpoints
+
+---
     "dataCollection": {
       "interval": 300000,    // Main polling interval (milliseconds)
       "batchSize": 100,
