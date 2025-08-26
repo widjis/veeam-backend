@@ -419,6 +419,35 @@ class VeeamBackendServer {
             }
         });
 
+        // Test endpoint for creating test alerts
+        router.post('/alerts/test', async (req, res, next) => {
+            try {
+                const { type = 'test', severity = 'info', title, description } = req.body;
+                
+                const testAlert = this.alertingService.createAlert(
+                    type,
+                    severity,
+                    title || `Test Alert - ${new Date().toLocaleTimeString()}`,
+                    description || `This is a test alert created at ${new Date().toISOString()} to verify the alert system is working correctly.`,
+                    {
+                        testAlert: true,
+                        createdBy: 'API Test',
+                        timestamp: new Date().toISOString()
+                    }
+                );
+                
+                // Immediately send the test alert
+                await this.alertingService.sendAlertNotification(testAlert);
+                
+                res.json({ 
+                    message: 'Test alert created and sent successfully',
+                    alert: testAlert
+                });
+            } catch (error) {
+                next(error);
+            }
+        });
+
         // Data collection routes
         router.get('/data/jobs', async (req, res, next) => {
             try {
@@ -597,14 +626,15 @@ class VeeamBackendServer {
         router.delete('/schedules/:name', async (req, res, next) => {
             try {
                 const { name } = req.params;
+                const decodedName = decodeURIComponent(name);
                 const schedules = this.configManager.get('reporting.schedules') || [];
-                const scheduleExists = schedules.find(s => s.name === name);
+                const scheduleExists = schedules.find(s => s.name === decodedName);
                 
                 if (!scheduleExists) {
                     return res.status(404).json({ error: 'Schedule not found' });
                 }
 
-                await this.configManager.removeSchedule(name);
+                await this.configManager.removeSchedule(decodedName);
                 this.setupScheduledJobs(); // Refresh scheduled jobs
                 res.json({ 
                     message: 'Schedule deleted successfully',
@@ -663,7 +693,11 @@ class VeeamBackendServer {
      */
     setupScheduledJobs() {
         // Clear existing jobs
-        this.scheduledJobs.forEach(job => job.destroy());
+        this.scheduledJobs.forEach(job => {
+            if (job && typeof job.stop === 'function') {
+                job.stop();
+            }
+        });
         this.scheduledJobs.clear();
 
         const schedules = this.configManager.get('reporting.schedules') || [];

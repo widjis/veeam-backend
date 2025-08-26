@@ -200,7 +200,7 @@ class WhatsAppService {
             message += `• 🚨 Active Alerts: ${summary.activeAlerts || 'N/A'}\n\n`;
             
             // System Health Score
-            const healthScore = summary.healthScore || (reportData.healthScore && reportData.healthScore.score) || 'N/A';
+            const healthScore = summary.healthScore || (reportData.healthScore && reportData.healthScore.score) || reportData.healthScore || 'N/A';
             message += `🏥 *System Health Score:* ${this.formatNumber(healthScore)}/100\n\n`;
             
             // Repository Details
@@ -278,30 +278,53 @@ class WhatsAppService {
             critical: '🚨',
             high: '⚠️',
             medium: '🟡',
-            low: 'ℹ️'
+            low: 'ℹ️',
+            warning: '⚠️',
+            info: 'ℹ️'
         };
 
         const emoji = severityEmojis[alert.severity] || 'ℹ️';
         
-        let message = `${emoji} <b>VEEAM ALERT</b>\n\n`;
-        message += `<b>Type:</b> ${alert.type}\n`;
-        message += `<b>Severity:</b> ${alert.severity.toUpperCase()}\n`;
-        message += `<b>Time:</b> ${moment(alert.timestamp).format('YYYY-MM-DD HH:mm:ss')}\n\n`;
-        message += `<b>Message:</b>\n${alert.message}\n\n`;
+        // Handle both field naming conventions
+        const alertMessage = alert.message || alert.description || alert.title || 'No message available';
+        const alertTimestamp = alert.timestamp || alert.createdAt;
+        const formattedTime = alertTimestamp ? moment(alertTimestamp).format('YYYY-MM-DD HH:mm:ss') : 'Unknown time';
+        
+        let message = `${emoji} *VEEAM ALERT*\n\n`;
+        message += `*Type:* ${alert.type}\n`;
+        message += `*Severity:* ${alert.severity.toUpperCase()}\n`;
+        message += `*Time:* ${formattedTime}\n\n`;
+        message += `*Message:*\n${alertMessage}\n\n`;
         
         if (alert.details) {
-            message += `<b>Details:</b>\n${alert.details}\n\n`;
+            message += `*Details:*\n${alert.details}\n\n`;
         }
         
-        if (alert.jobName) {
-            message += `<b>Job:</b> ${alert.jobName}\n`;
+        // Check metadata for additional job information
+        if (alert.jobName || alert.metadata?.jobName) {
+            message += `*Job:* ${alert.jobName || alert.metadata.jobName}\n`;
         }
         
-        if (alert.repositoryName) {
-            message += `<b>Repository:</b> ${alert.repositoryName}\n`;
+        if (alert.repositoryName || alert.metadata?.repositoryName) {
+            message += `*Repository:* ${alert.repositoryName || alert.metadata.repositoryName}\n`;
         }
         
-        message += `\n<b>Alert ID:</b> ${alert.id}\n`;
+        // Add metadata information if available
+        if (alert.metadata && Object.keys(alert.metadata).length > 0) {
+            const relevantMetadata = Object.entries(alert.metadata)
+                .filter(([key, value]) => value && !['jobName', 'repositoryName'].includes(key))
+                .slice(0, 3); // Limit to 3 most relevant fields
+            
+            if (relevantMetadata.length > 0) {
+                message += `\n*Additional Info:*\n`;
+                relevantMetadata.forEach(([key, value]) => {
+                    const formattedKey = key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase());
+                    message += `• ${formattedKey}: ${value}\n`;
+                });
+            }
+        }
+        
+        message += `\n*Alert ID:* ${alert.id}\n`;
         message += `\nTo acknowledge this alert, reply with: /ack ${alert.id}`;
         
         return message;
@@ -474,7 +497,8 @@ class WhatsAppService {
         caption += `•⁠  ⁠❌ Failure Rate: ${this.formatNumber(summary.failureRate)}%\n`;
         caption += `•⁠  ⁠⚠️ Warning Rate: ${this.formatNumber(summary.warningRate)}%\n`;
         caption += `•⁠  ⁠🚨 Active Alerts: ${summary.activeAlerts || 'N/A'}\n\n`;
-        caption += `🏥 System Health Score: ${this.formatNumber(summary.healthScore || 'N/A')}/100\n\n`;
+        const healthScore = summary.healthScore || (reportData.healthScore && reportData.healthScore.score) || reportData.healthScore || 'N/A';
+        caption += `🏥 System Health Score: ${this.formatNumber(healthScore)}/100\n\n`;
         
         // Repository Details
         const repoList = storage.repositories || [];
@@ -514,7 +538,7 @@ class WhatsAppService {
      * @returns {Promise<boolean>} - Success status
      */
     async sendAcknowledgment(alertId, acknowledgedBy = 'User') {
-        const message = `✅ <b>Alert Acknowledged</b>\n\n` +
+        const message = `✅ *Alert Acknowledged*\n\n` +
                        `Alert ID: ${alertId}\n` +
                        `Acknowledged by: ${acknowledgedBy}\n` +
                        `Time: ${moment().format('YYYY-MM-DD HH:mm:ss')}`;

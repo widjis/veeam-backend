@@ -205,8 +205,8 @@ class AlertingService {
         return false;
       }
 
-      const message = this.formatAlertMessage(alert);
-      await this.whatsappService.sendAlert(message, alert.severity);
+      // WhatsApp service expects the alert object, not a formatted message
+      await this.whatsappService.sendAlert(alert);
       
       // Update alert notification tracking
       alert.lastNotified = new Date().toISOString();
@@ -450,8 +450,12 @@ class AlertingService {
             
             // Alert for jobs that completed in the last 5 minutes
             if (minutesAgo <= 5) {
-              const severity = session.result === 'Success' ? 'info' : 
-                             session.result === 'Warning' ? 'warning' : 'critical';
+              // Extract result from nested object structure
+              const resultValue = session.result?.result || session.result || 'Unknown';
+              const resultMessage = session.result?.message || 'No additional details';
+              
+              const severity = resultValue === 'Success' ? 'info' : 
+                             resultValue === 'Warning' ? 'warning' : 'critical';
               
               const existingAlert = Array.from(this.activeAlerts.values())
                 .find(alert => alert.metadata.sessionId === session.id && alert.type === 'job_completed');
@@ -460,12 +464,13 @@ class AlertingService {
                 this.createAlert(
                   'job_completed',
                   severity,
-                  `Backup Job ${session.result}: ${session.jobName || 'Unknown Job'}`,
-                  `Backup job "${session.jobName || 'Unknown Job'}" completed with result: ${session.result} at ${endTime.format('HH:mm:ss')}.`,
+                  `Backup Job ${resultValue}: ${session.jobName || 'Unknown Job'}`,
+                  `Backup job "${session.jobName || 'Unknown Job'}" completed with result: ${resultValue} at ${endTime.format('HH:mm:ss')}. ${resultMessage}`,
                   {
                     sessionId: session.id,
                     jobName: session.jobName,
-                    result: session.result,
+                    result: resultValue,
+                    resultMessage: resultMessage,
                     endTime: session.endTime,
                     duration: session.creationTime ? moment(session.endTime).diff(moment(session.creationTime), 'minutes') : null
                   }

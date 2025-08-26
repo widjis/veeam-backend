@@ -23,7 +23,7 @@ document.addEventListener('DOMContentLoaded', function() {
             toggleSection(this);
         });
     });
-    
+
     // Add event listeners for action buttons
     document.querySelectorAll('[data-action]').forEach(button => {
         button.addEventListener('click', function() {
@@ -52,7 +52,76 @@ document.addEventListener('DOMContentLoaded', function() {
             saveSectionConfig(section);
         }
     });
+    
+    // Setup modal event listeners
+    setupModalEventListeners();
 });
+
+// Setup modal event listeners
+function setupModalEventListeners() {
+    // Add new schedule button
+    const addBtn = document.getElementById('add-schedule-btn');
+    if (addBtn) {
+        addBtn.addEventListener('click', () => {
+            openScheduleModal();
+        });
+    }
+    
+    // Schedule form submission
+    const scheduleForm = document.getElementById('schedule-form');
+    if (scheduleForm) {
+        scheduleForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            saveSchedule();
+        });
+    }
+    
+    // Close buttons
+    document.querySelectorAll('.close').forEach(btn => {
+        btn.addEventListener('click', closeModals);
+    });
+    
+    // Cancel buttons
+    const cancelScheduleBtn = document.getElementById('cancel-schedule');
+    if (cancelScheduleBtn) {
+        cancelScheduleBtn.addEventListener('click', closeModals);
+    }
+    
+    const cancelDeleteBtn = document.getElementById('cancel-delete');
+    if (cancelDeleteBtn) {
+        cancelDeleteBtn.addEventListener('click', closeModals);
+    }
+    
+    // Modal background click to close
+    document.querySelectorAll('.modal').forEach(modal => {
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                closeModals();
+            }
+        });
+    });
+    
+    // Delete confirmation
+    const confirmDeleteBtn = document.getElementById('confirm-delete');
+    if (confirmDeleteBtn) {
+        confirmDeleteBtn.addEventListener('click', deleteSchedule);
+    }
+    
+    // Schedule frequency change handler
+    const frequencySelect = document.getElementById('schedule-frequency');
+    if (frequencySelect) {
+        frequencySelect.addEventListener('change', handleFrequencyChange);
+    }
+
+    // Time/day selection change handlers
+    const timeInputs = ['schedule-hour', 'schedule-minute', 'schedule-weekday', 'schedule-day'];
+    timeInputs.forEach(inputId => {
+        const input = document.getElementById(inputId);
+        if (input) {
+            input.addEventListener('change', generateCronFromSelections);
+        }
+    });
+}
 
 // Toggle section visibility
 function toggleSection(header) {
@@ -106,15 +175,16 @@ function populateForm(config) {
 
 
     // Populate all configuration sections
-    if (config.veeam) {
-        setValue('veeam.baseUrl', config.veeam.baseUrl);
-        setValue('veeam.username', config.veeam.username);
-        setValue('veeam.password', config.veeam.password);
-        setValue('veeam.rejectUnauthorized', config.veeam.rejectUnauthorized);
-        setValue('veeam.apiTimeout', config.veeam.apiTimeout);
-        setValue('veeam.retryAttempts', config.veeam.retryAttempts);
-        setValue('veeam.retryDelay', config.veeam.retryDelay);
-    }
+    // Veeam configuration is now managed via config.json or ENV variables only
+    // if (config.veeam) {
+    //     setValue('veeam.baseUrl', config.veeam.baseUrl);
+    //     setValue('veeam.username', config.veeam.username);
+    //     setValue('veeam.password', config.veeam.password);
+    //     setValue('veeam.rejectUnauthorized', config.veeam.rejectUnauthorized);
+    //     setValue('veeam.apiTimeout', config.veeam.apiTimeout);
+    //     setValue('veeam.retryAttempts', config.veeam.retryAttempts);
+    //     setValue('veeam.retryDelay', config.veeam.retryDelay);
+    // }
 
     if (config.whatsapp) {
         setValue('whatsapp.webhookUrl', config.whatsapp.webhookUrl || '');
@@ -286,14 +356,6 @@ function populateSchedulerTasks(schedules) {
 
 // Add event listeners for scheduler task CRUD operations
 function addSchedulerTaskEventListeners() {
-    // Add new schedule button
-    const addBtn = document.getElementById('add-schedule-btn');
-    if (addBtn) {
-        addBtn.addEventListener('click', () => {
-            openScheduleModal();
-        });
-    }
-    
     // Edit schedule buttons
     document.querySelectorAll('.edit-schedule-btn').forEach(btn => {
         btn.addEventListener('click', (e) => {
@@ -309,46 +371,6 @@ function addSchedulerTaskEventListeners() {
             confirmDeleteSchedule(scheduleName);
         });
     });
-    
-    // Modal close buttons
-    document.querySelectorAll('.close').forEach(btn => {
-        btn.addEventListener('click', closeModals);
-    });
-    
-    // Cancel buttons
-    const cancelScheduleBtn = document.getElementById('cancel-schedule');
-    if (cancelScheduleBtn) {
-        cancelScheduleBtn.addEventListener('click', closeModals);
-    }
-    
-    const cancelDeleteBtn = document.getElementById('cancel-delete');
-    if (cancelDeleteBtn) {
-        cancelDeleteBtn.addEventListener('click', closeModals);
-    }
-    
-    // Modal background click to close
-    document.querySelectorAll('.modal').forEach(modal => {
-        modal.addEventListener('click', (e) => {
-            if (e.target === modal) {
-                closeModals();
-            }
-        });
-    });
-    
-    // Save schedule form submission
-    const scheduleForm = document.getElementById('schedule-form');
-    if (scheduleForm) {
-        scheduleForm.addEventListener('submit', (e) => {
-            e.preventDefault();
-            saveSchedule();
-        });
-    }
-    
-    // Confirm delete button
-    const confirmDeleteBtn = document.getElementById('confirm-delete');
-    if (confirmDeleteBtn) {
-        confirmDeleteBtn.addEventListener('click', deleteSchedule);
-    }
 }
 
 // Open schedule modal for creating new schedule
@@ -357,20 +379,32 @@ function openScheduleModal(schedule = null) {
     const title = document.getElementById('modal-title');
     const form = document.getElementById('schedule-form');
     
+    // Check if required elements exist
+    if (!modal || !title || !form) {
+        console.error('Schedule modal elements not found');
+        return;
+    }
+    
     if (schedule) {
         title.textContent = 'Edit Schedule';
         document.getElementById('schedule-name').value = schedule.name;
-        document.getElementById('schedule-cron').value = schedule.cronExpression;
         document.getElementById('schedule-type').value = schedule.type || 'custom';
         document.getElementById('schedule-enabled').checked = schedule.enabled;
         document.getElementById('schedule-charts').checked = schedule.includeCharts;
         document.getElementById('schedule-image').checked = schedule.sendAsImage;
         document.getElementById('schedule-recipients').value = schedule.recipients ? schedule.recipients.join(',') : '';
         form.setAttribute('data-editing', schedule.name);
+        
+        // Parse existing cron expression and populate user-friendly fields
+        populateScheduleFields(schedule.cronExpression);
     } else {
         title.textContent = 'Add New Schedule';
         form.reset();
         form.removeAttribute('data-editing');
+        
+        // Set default frequency and generate initial cron
+        document.getElementById('schedule-frequency').value = 'daily';
+        handleFrequencyChange();
     }
     
     modal.style.display = 'block';
@@ -398,9 +432,19 @@ async function saveSchedule() {
     const formData = new FormData(form);
     const editingName = form.getAttribute('data-editing');
     
+    // Get cron expression from the appropriate source
+    const frequency = formData.get('frequency');
+    let cronExpression;
+    
+    if (frequency === 'custom') {
+        cronExpression = document.getElementById('schedule-cron').value;
+    } else {
+        cronExpression = document.getElementById('generated-cron').value;
+    }
+    
     const scheduleData = {
         name: formData.get('name'),
-        cronExpression: formData.get('cronExpression'),
+        cronExpression: cronExpression,
         type: formData.get('type'),
         enabled: formData.has('enabled'),
         includeCharts: formData.has('includeCharts'),
@@ -479,7 +523,7 @@ async function deleteSchedule() {
             showNotification('Schedule deleted successfully', 'success');
             closeModals();
             // Refresh the scheduler tasks display
-             loadConfiguration();
+             loadConfig();
         } else {
             const error = await response.text();
             showNotification(`Failed to delete schedule: ${error}`, 'error');
@@ -567,6 +611,125 @@ function getCronDescription(cronExpression) {
     return cronExpression;
 }
 
+// Handle frequency dropdown changes
+function handleFrequencyChange() {
+    const frequency = document.getElementById('schedule-frequency').value;
+    const timeSelection = document.getElementById('time-selection');
+    const weeklySelection = document.getElementById('weekly-selection');
+    const monthlySelection = document.getElementById('monthly-selection');
+    const customCron = document.getElementById('custom-cron');
+    
+    // Hide all conditional sections
+    timeSelection.style.display = 'none';
+    weeklySelection.style.display = 'none';
+    monthlySelection.style.display = 'none';
+    customCron.style.display = 'none';
+    
+    // Show relevant sections based on frequency
+    switch (frequency) {
+        case 'daily':
+            timeSelection.style.display = 'block';
+            break;
+        case 'weekly':
+            timeSelection.style.display = 'block';
+            weeklySelection.style.display = 'block';
+            break;
+        case 'monthly':
+            timeSelection.style.display = 'block';
+            monthlySelection.style.display = 'block';
+            break;
+        case 'hourly':
+            // No additional selections needed for hourly
+            break;
+        case 'custom':
+            customCron.style.display = 'block';
+            break;
+    }
+    
+    // Generate cron expression for non-custom frequencies
+    if (frequency !== 'custom') {
+        generateCronFromSelections();
+    }
+}
+
+// Generate cron expression from user selections
+function generateCronFromSelections() {
+    const frequency = document.getElementById('schedule-frequency').value;
+    const hour = document.getElementById('schedule-hour').value;
+    const minute = document.getElementById('schedule-minute').value;
+    const weekday = document.getElementById('schedule-weekday').value;
+    const day = document.getElementById('schedule-day').value;
+    
+    let cronExpression = '';
+    
+    switch (frequency) {
+        case 'daily':
+            cronExpression = `${minute} ${hour} * * *`;
+            break;
+        case 'weekly':
+            cronExpression = `${minute} ${hour} * * ${weekday}`;
+            break;
+        case 'monthly':
+            if (day === '-1') {
+                // Last day of month - more complex, use 28-31 with conditional
+                cronExpression = `${minute} ${hour} 28-31 * *`;
+            } else {
+                cronExpression = `${minute} ${hour} ${day} * *`;
+            }
+            break;
+        case 'hourly':
+            cronExpression = '0 * * * *'; // Every hour at minute 0
+            break;
+        case 'custom':
+            // Don't generate, user will input manually
+            return;
+    }
+    
+    // Update the hidden field that will be submitted
+    document.getElementById('generated-cron').value = cronExpression;
+}
+
+// Parse existing cron expression and populate user-friendly fields
+function populateScheduleFields(cronExpression) {
+    const parts = cronExpression.split(' ');
+    if (parts.length < 5) {
+        // Invalid cron, default to custom
+        document.getElementById('schedule-frequency').value = 'custom';
+        document.getElementById('schedule-cron').value = cronExpression;
+        handleFrequencyChange();
+        return;
+    }
+    
+    const [minute, hour, day, month, weekday] = parts;
+    
+    // Set time fields
+    document.getElementById('schedule-hour').value = hour === '*' ? '8' : hour;
+    document.getElementById('schedule-minute').value = minute === '*' ? '0' : minute;
+    
+    // Determine frequency type
+    if (hour === '*' && minute === '0' && day === '*' && month === '*' && weekday === '*') {
+        // Hourly
+        document.getElementById('schedule-frequency').value = 'hourly';
+    } else if (day === '*' && month === '*' && weekday === '*') {
+        // Daily
+        document.getElementById('schedule-frequency').value = 'daily';
+    } else if (day === '*' && month === '*' && weekday !== '*') {
+        // Weekly
+        document.getElementById('schedule-frequency').value = 'weekly';
+        document.getElementById('schedule-weekday').value = weekday;
+    } else if (month === '*' && weekday === '*' && day !== '*') {
+        // Monthly
+        document.getElementById('schedule-frequency').value = 'monthly';
+        document.getElementById('schedule-day').value = day;
+    } else {
+        // Custom
+        document.getElementById('schedule-frequency').value = 'custom';
+        document.getElementById('schedule-cron').value = cronExpression;
+    }
+    
+    handleFrequencyChange();
+}
+
 async function saveConfig() {
     try {
         showStatus('Saving configuration...', 'success');
@@ -632,6 +795,12 @@ async function saveConfig() {
 // Save specific section configuration
 async function saveSectionConfig(sectionName) {
     try {
+        // Prevent saving Veeam configuration through web interface
+        if (sectionName === 'veeam') {
+            showStatus('Veeam configuration is managed via config.json or environment variables only', 'error');
+            return;
+        }
+        
         showStatus(`Saving ${sectionName} configuration...`, 'success');
         
         // Collect form data for specific section

@@ -1,6 +1,6 @@
 {
   "veeam": {
-    "baseUrl": "https://your-veeam-server:9419/api/v1",
+    "baseUrl": "https://your-veeam-server:9419",
     "username": "",
     "password": "",
     "tokenPath": "./tokens",

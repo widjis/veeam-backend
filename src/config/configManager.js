@@ -321,7 +321,23 @@ class ConfigManager {
      */
     async saveConfig() {
         try {
-            const { error } = this.configSchema.validate(this.config, { allowUnknown: false });
+            // Create a deep copy for validation to avoid modifying the original config
+            const configForValidation = JSON.parse(JSON.stringify(this.config));
+            
+            // If password is missing but was previously set, preserve it from the existing file
+            if (!configForValidation.veeam?.password && fs.existsSync(this.configFile)) {
+                try {
+                    const existingConfig = await fs.readJson(this.configFile);
+                    if (existingConfig.veeam?.password) {
+                        configForValidation.veeam.password = existingConfig.veeam.password;
+                        this.config.veeam.password = existingConfig.veeam.password;
+                    }
+                } catch (readError) {
+                    this.logger.warn('Could not read existing config for password preservation', { error: readError.message });
+                }
+            }
+            
+            const { error } = this.configSchema.validate(configForValidation, { allowUnknown: false });
             
             if (error) {
                 throw new Error(`Configuration validation failed: ${error.message}`);

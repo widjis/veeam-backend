@@ -254,8 +254,8 @@
             <div id="status" class="status"></div>
 
             <form id="configForm">
-                <!-- Veeam Configuration -->
-                <div class="section active">
+                <!-- Veeam Configuration - Hidden (Configure via config.json or ENV) -->
+                <div class="section active" style="display: none;">
                     <div class="section-header" data-toggle="section">
                         <h3>🔌 Veeam API Configuration</h3>
                         <span class="toggle-icon">▼</span>
@@ -482,76 +482,7 @@
                             </div>
                         </div>
 
-                        <!-- Add Schedule Modal -->
-                        <div id="schedule-modal" class="modal" style="display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5);">
-                            <div class="modal-content" style="background-color: #fefefe; margin: 5% auto; padding: 20px; border: 1px solid #888; width: 80%; max-width: 600px; border-radius: 8px;">
-                                <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                                    <h3 id="modal-title">Add New Schedule</h3>
-                                    <span class="close" style="color: #aaa; font-size: 28px; font-weight: bold; cursor: pointer;">&times;</span>
-                                </div>
-                                <form id="schedule-form">
-                                    <div class="form-row">
-                                        <div class="form-group">
-                                            <label for="schedule-name">Schedule Name</label>
-                                            <input type="text" id="schedule-name" name="name" required placeholder="e.g., Daily Morning Report">
-                                        </div>
-                                        <div class="form-group">
-                                            <label for="schedule-type">Type</label>
-                                            <select id="schedule-type" name="type" required>
-                                                <option value="daily">Daily</option>
-                                                <option value="weekly">Weekly</option>
-                                                <option value="monthly">Monthly</option>
-                                                <option value="custom">Custom</option>
-                                            </select>
-                                        </div>
-                                    </div>
-                                    <div class="form-row">
-                                        <div class="form-group">
-                                            <label for="schedule-cron">Cron Expression</label>
-                                            <input type="text" id="schedule-cron" name="cronExpression" required placeholder="0 8 * * *">
-                                            <div class="help-text">Format: minute hour day month weekday (e.g., "0 8 * * *" for 8:00 AM daily)</div>
-                                        </div>
-                                    </div>
-                                    <div class="form-row">
-                                        <div class="checkbox-group">
-                                            <input type="checkbox" id="schedule-enabled" name="enabled" checked>
-                                            <label for="schedule-enabled">Enabled</label>
-                                        </div>
-                                        <div class="checkbox-group">
-                                            <input type="checkbox" id="schedule-charts" name="includeCharts">
-                                            <label for="schedule-charts">Include Charts</label>
-                                        </div>
-                                        <div class="checkbox-group">
-                                            <input type="checkbox" id="schedule-image" name="sendAsImage">
-                                            <label for="schedule-image">Send as Image</label>
-                                        </div>
-                                    </div>
-                                    <div class="form-row">
-                                        <div class="form-group">
-                                            <label for="schedule-recipients">Recipients (comma-separated)</label>
-                                            <input type="text" id="schedule-recipients" name="recipients" placeholder="recipient1,recipient2">
-                                            <div class="help-text">Leave empty to use default chat ID</div>
-                                        </div>
-                                    </div>
-                                    <div class="modal-footer" style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px;">
-                                        <button type="button" class="btn btn-secondary" id="cancel-schedule" style="background: #6c757d; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer;">Cancel</button>
-                                        <button type="submit" class="btn btn-primary" style="background: #007bff; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer;">Save Schedule</button>
-                                    </div>
-                                </form>
-                            </div>
-                        </div>
 
-                        <!-- Delete Confirmation Modal -->
-                        <div id="delete-modal" class="modal" style="display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5);">
-                            <div class="modal-content" style="background-color: #fefefe; margin: 15% auto; padding: 20px; border: 1px solid #888; width: 400px; border-radius: 8px; text-align: center;">
-                                <h3>Confirm Delete</h3>
-                                <p>Are you sure you want to delete the schedule "<span id="delete-schedule-name"></span>"?</p>
-                                <div style="display: flex; justify-content: center; gap: 10px; margin-top: 20px;">
-                                    <button type="button" class="btn btn-secondary" id="cancel-delete" style="background: #6c757d; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer;">Cancel</button>
-                                    <button type="button" class="btn btn-danger" id="confirm-delete" style="background: #dc3545; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer;">Delete</button>
-                                </div>
-                            </div>
-                        </div>
                         <div class="section-actions" style="margin-top: 20px; padding-top: 15px; border-top: 1px solid #e0e0e0; text-align: right;">
                             <button type="button" class="btn btn-success btn-section" data-section="reporting" style="background: #28a745; padding: 10px 20px; font-size: 14px;">💾 Save Reporting Settings</button>
                         </div>
@@ -603,6 +534,161 @@
             <button type="button" class="btn btn-success" data-action="saveConfig">💾 Save Configuration</button>
             <button type="button" class="btn btn-secondary" data-action="testConnections">🔍 Test Connections</button>
             <button type="button" class="btn btn-danger" data-action="resetConfig">🔄 Reset to Defaults</button>
+        </div>
+    </div>
+
+    <!-- Add Schedule Modal -->
+    <div id="schedule-modal" class="modal" style="display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5);">
+        <div class="modal-content" style="background-color: #fefefe; margin: 5% auto; padding: 20px; border: 1px solid #888; width: 80%; max-width: 600px; border-radius: 8px;">
+            <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <h3 id="modal-title">Add New Schedule</h3>
+                <span class="close" style="color: #aaa; font-size: 28px; font-weight: bold; cursor: pointer;">&times;</span>
+            </div>
+            <form id="schedule-form">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="schedule-name">Schedule Name</label>
+                        <input type="text" id="schedule-name" name="name" required placeholder="e.g., Daily Morning Report">
+                    </div>
+                    <div class="form-group">
+                        <label for="schedule-type">Type</label>
+                        <select id="schedule-type" name="type" required>
+                            <option value="daily">Daily</option>
+                            <option value="weekly">Weekly</option>
+                            <option value="monthly">Monthly</option>
+                            <option value="custom">Custom</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="schedule-frequency">Schedule Frequency</label>
+                        <select id="schedule-frequency" name="frequency" required>
+                            <option value="daily">Daily</option>
+                            <option value="weekly">Weekly</option>
+                            <option value="monthly">Monthly</option>
+                            <option value="hourly">Every Hour</option>
+                            <option value="custom">Custom (Advanced)</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-row" id="time-selection">
+                    <div class="form-group">
+                        <label for="schedule-hour">Time</label>
+                        <div style="display: flex; gap: 10px; align-items: center;">
+                            <select id="schedule-hour" name="hour" required>
+                                <option value="0">12 AM</option>
+                                <option value="1">1 AM</option>
+                                <option value="2">2 AM</option>
+                                <option value="3">3 AM</option>
+                                <option value="4">4 AM</option>
+                                <option value="5">5 AM</option>
+                                <option value="6">6 AM</option>
+                                <option value="7">7 AM</option>
+                                <option value="8" selected>8 AM</option>
+                                <option value="9">9 AM</option>
+                                <option value="10">10 AM</option>
+                                <option value="11">11 AM</option>
+                                <option value="12">12 PM</option>
+                                <option value="13">1 PM</option>
+                                <option value="14">2 PM</option>
+                                <option value="15">3 PM</option>
+                                <option value="16">4 PM</option>
+                                <option value="17">5 PM</option>
+                                <option value="18">6 PM</option>
+                                <option value="19">7 PM</option>
+                                <option value="20">8 PM</option>
+                                <option value="21">9 PM</option>
+                                <option value="22">10 PM</option>
+                                <option value="23">11 PM</option>
+                            </select>
+                            <span>:</span>
+                            <select id="schedule-minute" name="minute" required>
+                                <option value="0" selected>00</option>
+                                <option value="15">15</option>
+                                <option value="30">30</option>
+                                <option value="45">45</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div class="form-row" id="weekly-selection" style="display: none;">
+                    <div class="form-group">
+                        <label for="schedule-weekday">Day of Week</label>
+                        <select id="schedule-weekday" name="weekday">
+                            <option value="1">Monday</option>
+                            <option value="2">Tuesday</option>
+                            <option value="3">Wednesday</option>
+                            <option value="4">Thursday</option>
+                            <option value="5">Friday</option>
+                            <option value="6">Saturday</option>
+                            <option value="0">Sunday</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-row" id="monthly-selection" style="display: none;">
+                    <div class="form-group">
+                        <label for="schedule-day">Day of Month</label>
+                        <select id="schedule-day" name="day">
+                            <option value="1" selected>1st</option>
+                            <option value="2">2nd</option>
+                            <option value="3">3rd</option>
+                            <option value="4">4th</option>
+                            <option value="5">5th</option>
+                            <option value="10">10th</option>
+                            <option value="15">15th</option>
+                            <option value="20">20th</option>
+                            <option value="25">25th</option>
+                            <option value="-1">Last day</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-row" id="custom-cron" style="display: none;">
+                    <div class="form-group">
+                        <label for="schedule-cron">Cron Expression</label>
+                        <input type="text" id="schedule-cron" name="cronExpression" placeholder="0 8 * * *">
+                        <div class="help-text">Format: minute hour day month weekday (e.g., "0 8 * * *" for 8:00 AM daily)</div>
+                    </div>
+                </div>
+                <input type="hidden" id="generated-cron" name="cronExpression">
+                <div class="form-row">
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="schedule-enabled" name="enabled" checked>
+                        <label for="schedule-enabled">Enabled</label>
+                    </div>
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="schedule-charts" name="includeCharts">
+                        <label for="schedule-charts">Include Charts</label>
+                    </div>
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="schedule-image" name="sendAsImage">
+                        <label for="schedule-image">Send as Image</label>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="schedule-recipients">Recipients (comma-separated)</label>
+                        <input type="text" id="schedule-recipients" name="recipients" placeholder="recipient1,recipient2">
+                        <div class="help-text">Leave empty to use default chat ID</div>
+                    </div>
+                </div>
+                <div class="modal-footer" style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px;">
+                    <button type="button" class="btn btn-secondary" id="cancel-schedule" style="background: #6c757d; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer;">Cancel</button>
+                    <button type="submit" class="btn btn-primary" style="background: #007bff; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer;">Save Schedule</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Delete Confirmation Modal -->
+    <div id="delete-modal" class="modal" style="display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5);">
+        <div class="modal-content" style="background-color: #fefefe; margin: 15% auto; padding: 20px; border: 1px solid #888; width: 400px; border-radius: 8px; text-align: center;">
+            <h3>Confirm Delete</h3>
+            <p>Are you sure you want to delete the schedule "<span id="delete-schedule-name"></span>"?</p>
+            <div style="display: flex; justify-content: center; gap: 10px; margin-top: 20px;">
+                <button type="button" class="btn btn-secondary" id="cancel-delete" style="background: #6c757d; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer;">Cancel</button>
+                <button type="button" class="btn btn-danger" id="confirm-delete" style="background: #dc3545; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer;">Delete</button>
+            </div>
         </div>
     </div>
 

@@ -224,6 +224,8 @@ class HtmlReportService {
 
         // Health status
         const healthScore = data.healthScore?.score || data.summary?.healthScore?.score || data.summary?.healthScore || 0;
+        this.logger.info(`Health score calculation: healthScore=${healthScore}, data.healthScore=${JSON.stringify(data.healthScore)}, data.summary?.healthScore=${JSON.stringify(data.summary?.healthScore)}`);
+        
         let healthStatus = 'Critical';
         if (healthScore >= 90) healthStatus = 'Excellent';
         else if (healthScore >= 80) healthStatus = 'Good';

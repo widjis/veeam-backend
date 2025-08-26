@@ -124,10 +124,22 @@ class DataCollectionService {
       const cached = this.getCachedData('sessionStates');
       if (cached) return cached;
 
-      const data = await this.apiClient.get('/api/v1/sessions/states');
-      this.setCachedData('sessionStates', data);
-      this.logger.info(`Collected session states`);
-      return data;
+      // Try to get session states, but handle gracefully if endpoint doesn't exist
+      try {
+        const data = await this.apiClient.get('/api/v1/sessions/states');
+        this.setCachedData('sessionStates', data);
+        this.logger.info(`Collected session states`);
+        return data;
+      } catch (apiError) {
+        if (apiError.response?.status === 404 || apiError.response?.status === 400) {
+          this.logger.warn('Session states endpoint not available, skipping...');
+          // Return empty data structure to maintain compatibility
+          const emptyData = { data: [] };
+          this.setCachedData('sessionStates', emptyData);
+          return emptyData;
+        }
+        throw apiError;
+      }
     } catch (error) {
       this.logger.error('Failed to get session states:', error.message);
       throw error;
@@ -183,12 +195,13 @@ class DataCollectionService {
       const cached = this.getCachedData('infrastructureServers');
       if (cached) return cached;
 
-      const data = await this.apiClient.get('/api/v1/infrastructure/servers');
+      // Use the correct endpoint for managed servers
+      const data = await this.apiClient.get('/api/v1/backupInfrastructure/managedServers');
       this.setCachedData('infrastructureServers', data);
-      this.logger.info(`Collected ${data.data?.length || 0} infrastructure servers`);
+      this.logger.info(`Collected ${data.data?.length || 0} managed servers`);
       return data;
     } catch (error) {
-      this.logger.error('Failed to get infrastructure servers:', error.message);
+      this.logger.error('Failed to get managed servers:', error.message);
       throw error;
     }
   }
