@@ -6,9 +6,10 @@ const winston = require('winston');
 const _ = require('lodash');
 
 class AlertingService {
-  constructor(dataCollectionService, whatsappService, config = {}) {
+  constructor(dataCollectionService, whatsappService, config = {}, reportingEngine = null) {
     this.dataService = dataCollectionService;
     this.whatsappService = whatsappService;
+    this.reportingEngine = reportingEngine;
     this.config = {
       alertsFilePath: path.join(__dirname, '../../data/alerts.json'),
       acknowledgedAlertsFilePath: path.join(__dirname, '../../data/acknowledged_alerts.json'),
@@ -335,9 +336,16 @@ class AlertingService {
   async checkSystemHealth() {
     try {
       const data = await this.dataService.collectAllData();
-      const reportingEngine = require('./reportingEngine');
-      const engine = new reportingEngine(this.dataService);
-      const healthScore = engine.calculateHealthScore(data);
+      let healthScore;
+      
+      if (this.reportingEngine) {
+        healthScore = this.reportingEngine.calculateHealthScore(data);
+      } else {
+        // Fallback: create temporary engine without alerting service to avoid circular dependency
+        const reportingEngine = require('./reportingEngine');
+        const engine = new reportingEngine(this.dataService);
+        healthScore = engine.calculateHealthScore(data);
+      }
       
       const existingAlert = Array.from(this.activeAlerts.values())
         .find(alert => alert.type === 'system_health');

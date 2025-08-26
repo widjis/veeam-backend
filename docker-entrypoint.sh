@@ -6,9 +6,17 @@
 mkdir -p /app/config
 chmod 775 /app/config
 
-# Create config.json if it doesn't exist
+# Ensure config.json exists (should already be copied from source)
 if [ ! -f /app/config/config.json ]; then
-    touch /app/config/config.json
+    if [ -f /app/config/default-config.json ]; then
+        cp /app/config/default-config.json /app/config/config.json
+        echo "Fallback: Copied default-config.json to config.json"
+    else
+        touch /app/config/config.json
+        echo "Fallback: Created empty config.json"
+    fi
+else
+    echo "Using existing config.json from source"
 fi
 
 # Ensure proper ownership and permissions

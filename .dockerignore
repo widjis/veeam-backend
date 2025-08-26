@@ -3,6 +3,8 @@ npm-debug.log
 logs
 data
 .env
+!config/default-config.json
+!config/config.json
 .git
 .gitignore
 README.md

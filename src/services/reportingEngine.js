@@ -3,8 +3,9 @@ const winston = require('winston');
 const _ = require('lodash');
 
 class ReportingEngine {
-  constructor(dataCollectionService, config = {}) {
+  constructor(dataCollectionService, config = {}, alertingService = null) {
     this.dataService = dataCollectionService;
+    this.alertingService = alertingService;
     this.config = {
       timezone: config.timezone || 'UTC',
       dateFormat: config.dateFormat || 'YYYY-MM-DD HH:mm:ss',
@@ -146,8 +147,12 @@ class ReportingEngine {
         summary.warningRate = total > 0 ? ((results.Warning || 0) / total * 100) : 0;
       }
 
-      // Count active alerts (failed jobs in last 24 hours)
-      summary.activeAlerts = this.getRecentFailures(data, 24).length;
+      // Count active alerts from alerting service if available, otherwise use recent failures
+      if (this.alertingService) {
+        summary.activeAlerts = this.alertingService.getActiveAlerts().length;
+      } else {
+        summary.activeAlerts = this.getRecentFailures(data, 24).length;
+      }
 
     } catch (error) {
       this.logger.error('Error generating performance summary:', error.message);

@@ -787,3 +787,56 @@ Invoke-RestMethod -Uri "http://localhost:3000/api/schedules" -Method POST -Conte
 - Improves system stability and reduces false alerts
 
 **Status**: ✅ Completed and Verified
+
+---
+
+## 2025-08-26 14:21:00 - Fixed Incorrect Active Alerts Count in Reports
+
+### Problem
+**CRITICAL ISSUE**: WhatsApp reports were showing 19 active alerts instead of the actual 1 alert, causing confusion and false alarm escalation.
+
+### Root Cause Analysis
+The ReportingEngine was incorrectly calculating activeAlerts count by using `getRecentFailures()` method (which returns failed backup sessions) instead of actual alerts from the AlertingService.
+
+**Code Issue**:
+```javascript
+// INCORRECT: Using failed sessions as alerts count
+activeAlerts: recentFailures.length
+
+// CORRECT: Using actual alerts from AlertingService
+activeAlerts: this.alertingService.getActiveAlerts().length
+```
+
+### Solution Implemented
+1. **Modified ReportingEngine Constructor**:
+   - Added AlertingService parameter to constructor
+   - Stored reference for use in report generation
+
+2. **Updated generatePerformanceSummary Method**:
+   - Changed activeAlerts calculation to use `this.alertingService.getActiveAlerts().length`
+   - Added fallback to `getRecentFailures` if AlertingService is not available
+   - Maintained backward compatibility
+
+3. **Restructured Service Initialization**:
+   - Updated server.js to pass AlertingService to ReportingEngine constructor
+   - Resolved circular dependency issues between services
+
+### Technical Changes
+- **File Modified**: `src/services/reportingEngine.js`
+  - Constructor now accepts `alertingService` parameter
+  - `generatePerformanceSummary()` uses correct alerts count
+- **File Modified**: `src/server.js`
+  - Updated ReportingEngine instantiation with AlertingService parameter
+
+### Verification Results
+- ✅ WhatsApp reports now correctly show 1 active alert instead of 19
+- ✅ Message length decreased from 524 to 523 characters (confirming fix)
+- ✅ Alert count accuracy restored in all report types
+- ✅ No impact on other reporting functionality
+
+### Files Modified
+- `src/services/reportingEngine.js` (alerts count calculation)
+- `src/server.js` (service initialization)
+- `docs/JOURNAL.md` (documentation)
+
+**Status**: ✅ Completed - Critical reporting accuracy issue resolved

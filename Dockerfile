@@ -10,12 +10,16 @@ RUN npm ci --only=production && npm cache clean --force
 # Copy application code
 COPY . .
 
+# Ensure config directory and both config files are copied
+COPY config/default-config.json ./config/
+COPY config/config.json ./config/
+
 # Copy and make entrypoint script executable
 COPY docker-entrypoint.sh /usr/local/bin/
 RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 
 # Create necessary directories
-RUN mkdir -p logs data config
+RUN mkdir -p logs data config reports
 
 # Install su-exec for user switching
 RUN apk add --no-cache su-exec

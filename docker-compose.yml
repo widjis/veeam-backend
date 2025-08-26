@@ -9,15 +9,23 @@ services:
       - "${SERVER_PORT:-3000}:${SERVER_PORT:-3000}"
     environment:
       - NODE_ENV=production
-      - TZ=UTC
+      - TZ=${TIMEZONE:-UTC}
       - SERVER_PORT=${SERVER_PORT:-3000}
       - SERVER_HOST=${SERVER_HOST:-0.0.0.0}
+      - VEEAM_BASE_URL=${VEEAM_BASE_URL}
+      - VEEAM_USERNAME=${VEEAM_USERNAME}
+      - VEEAM_PASSWORD=${VEEAM_PASSWORD}
+      - WHATSAPP_WEBHOOK_URL=${WHATSAPP_WEBHOOK_URL}
+      - WHATSAPP_CHAT_ID=${WHATSAPP_CHAT_ID}
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+      - ALERTING_ENABLED=${ALERTING_ENABLED:-true}
     env_file:
       - .env
     volumes:
       - ./logs:/app/logs
       - ./data:/app/data
       - ./config:/app/config
+      - ./reports:/app/reports
     healthcheck:
       test: ["CMD", "node", "-e", "const port = process.env.SERVER_PORT || 3000; require('http').get('http://localhost:' + port + '/health', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) }).on('error', () => process.exit(1))"]
       interval: 30s

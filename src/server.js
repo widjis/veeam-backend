@@ -107,14 +107,17 @@ class VeeamBackendServer {
         // Initialize data collection service
         this.dataCollectionService = new DataCollectionService(this.veeamClient, config.monitoring.dataCollection);
         
-        // Initialize reporting engine
-        this.reportingEngine = new ReportingEngine(this.dataCollectionService, config.reporting);
-        
         // Initialize WhatsApp service
         this.whatsappService = new WhatsAppService(config.whatsapp);
         
-        // Initialize alerting service
+        // Initialize alerting service (without reporting engine initially)
         this.alertingService = new AlertingService(this.dataCollectionService, this.whatsappService, config.alerting);
+        
+        // Initialize reporting engine with alerting service
+        this.reportingEngine = new ReportingEngine(this.dataCollectionService, config.reporting, this.alertingService);
+        
+        // Set reporting engine reference in alerting service to complete the connection
+        this.alertingService.reportingEngine = this.reportingEngine;
         
         // Initialize HTML report service
         this.htmlReportService = new HtmlReportService();
