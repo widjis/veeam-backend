@@ -4,7 +4,7 @@
 
 The Veeam Backend API provides comprehensive monitoring, reporting, and alerting capabilities for Veeam Backup & Replication environments. This RESTful API enables integration with external systems and provides real-time access to backup job status, repository information, and automated reporting features.
 
-**Base URL:** `http://localhost:3000/api`
+**Base URL:** `http://localhost:3005/api`
 
 **Version:** 1.0.0
 
@@ -57,7 +57,7 @@ Returns the overall health status of the backend server.
 
 **Example:**
 ```bash
-curl -X GET http://localhost:3000/health
+curl -X GET http://localhost:3005/health
 ```
 
 ### GET /api/health/veeam
@@ -90,7 +90,7 @@ Checks the connectivity and health of the Veeam API.
 
 **Example:**
 ```bash
-curl -X GET http://localhost:3000/api/health/veeam
+curl -X GET http://localhost:3005/api/health/veeam
 ```
 
 ---
@@ -105,8 +105,8 @@ Retrieves the current system configuration (sensitive data excluded).
 ```json
 {
   "server": {
-    "port": 3000,
-    "host": "localhost",
+    "port": 3005,
+    "host": "0.0.0.0",
     "cors": {
       "enabled": true,
       "origin": "*"
@@ -121,6 +121,10 @@ Retrieves the current system configuration (sensitive data excluded).
     "baseUrl": "https://veeam-server:9419",
     "username": "admin"
   },
+  "whatsapp": {
+    "webhookUrl": "http://10.60.10.59:8192/send-group-message",
+    "chatId": "120363215673098371@g.us"
+  },
   "reporting": {
     "schedules": [
       {
@@ -129,7 +133,8 @@ Retrieves the current system configuration (sensitive data excluded).
         "enabled": true,
         "sendAsImage": false
       }
-    ]
+    ],
+    "timezone": "UTC"
   },
   "alerting": {
     "enabled": true,
@@ -138,14 +143,50 @@ Retrieves the current system configuration (sensitive data excluded).
       "healthScore": 70,
       "jobDuration": 14400,
       "failureCount": 3
+    },
+    "notifications": {
+      "jobFailure": true,
+      "repositoryUsage": true,
+      "systemHealth": true,
+      "longRunningJob": true,
+      "jobStarted": false,
+      "jobCompleted": false,
+      "infrastructureIssue": true
+    },
+    "quietHours": {
+      "enabled": false,
+      "start": "22:00",
+      "end": "06:00",
+      "timezone": "UTC",
+      "allowCritical": true
     }
+  },
+  "monitoring": {
+    "dataCollection": {
+      "interval": 300001,
+      "batchSize": 100,
+      "cacheTimeout": 300000,
+      "enableCaching": true
+    },
+    "healthCheck": {
+      "interval": 60000,
+      "timeout": 30000,
+      "retries": 3
+    }
+  },
+  "logging": {
+    "level": "info",
+    "maxFiles": 10,
+    "maxSize": "10m",
+    "enableConsole": true,
+    "enableFile": true
   }
 }
 ```
 
 **Example:**
 ```bash
-curl -X GET http://localhost:3000/api/config
+curl -X GET http://localhost:3005/api/config
 ```
 
 ### PUT /api/config/:section
@@ -175,7 +216,7 @@ Updates a specific configuration section.
 
 **Example:**
 ```bash
-curl -X PUT http://localhost:3000/api/config/alerting \
+curl -X PUT http://localhost:3005/api/config/alerting \
   -H "Content-Type: application/json" \
   -d '{
     "enabled": true,
@@ -215,7 +256,7 @@ Retrieves information about all backup jobs.
 
 **Example:**
 ```bash
-curl -X GET http://localhost:3000/api/data/jobs
+curl -X GET http://localhost:3005/api/data/jobs
 ```
 
 ### GET /api/data/repositories
@@ -240,7 +281,7 @@ Retrieves information about backup repositories.
 
 **Example:**
 ```bash
-curl -X GET http://localhost:3000/api/data/repositories
+curl -X GET http://localhost:3005/api/data/repositories
 ```
 
 ### GET /api/data/sessions
@@ -269,7 +310,7 @@ Retrieves recent backup sessions.
 
 **Example:**
 ```bash
-curl -X GET "http://localhost:3000/api/data/sessions?limit=50"
+curl -X GET "http://localhost:3005/api/data/sessions?limit=50"
 ```
 
 ---
@@ -320,7 +361,7 @@ Generates and returns a comprehensive daily report.
 
 **Example:**
 ```bash
-curl -X GET http://localhost:3000/api/reports/daily
+curl -X GET http://localhost:3005/api/reports/daily
 ```
 
 ### GET /api/reports/quick-status
@@ -331,6 +372,9 @@ Returns a quick status overview.
 ```json
 {
   "timestamp": "2024-01-15T10:30:00.000Z",
+  "runningJobs": 2,
+  "recentFailures": 1,
+  "systemHealth": "Warning",
   "overallStatus": "Warning",
   "jobsStatus": {
     "total": 15,
@@ -349,7 +393,7 @@ Returns a quick status overview.
 
 **Example:**
 ```bash
-curl -X GET http://localhost:3000/api/reports/quick-status
+curl -X GET http://localhost:3005/api/reports/quick-status
 ```
 
 ### GET /api/reports/html
@@ -360,7 +404,7 @@ Generates and returns an HTML-formatted report.
 
 **Example:**
 ```bash
-curl -X GET http://localhost:3000/api/reports/html
+curl -X GET http://localhost:3005/api/reports/html
 ```
 
 ### GET /api/reports/download
@@ -371,7 +415,7 @@ Generates and downloads an HTML report file.
 
 **Example:**
 ```bash
-curl -X GET http://localhost:3000/api/reports/download -o veeam-report.html
+curl -X GET http://localhost:3005/api/reports/download -o veeam-report.html
 ```
 
 ### POST /api/reports/send
@@ -381,10 +425,8 @@ Sends a report via WhatsApp.
 **Request Body:**
 ```json
 {
-  "format": "text",
-  "includeImage": false,
-  "width": 1200,
-  "height": 1600
+  "type": "daily",
+  "format": "text"
 }
 ```
 
@@ -398,13 +440,11 @@ Sends a report via WhatsApp.
 
 **Example:**
 ```bash
-curl -X POST http://localhost:3000/api/reports/send \
+curl -X POST http://localhost:3005/api/reports/send \
   -H "Content-Type: application/json" \
   -d '{
-    "format": "text",
-    "includeImage": true,
-    "width": 1200,
-    "height": 1600
+    "type": "daily",
+    "format": "text"
   }'
 ```
 
@@ -430,7 +470,7 @@ Sends a report as an image via WhatsApp.
 
 **Example:**
 ```bash
-curl -X POST http://localhost:3000/api/reports/send-image \
+curl -X POST http://localhost:3005/api/reports/send-image \
   -H "Content-Type: application/json" \
   -d '{
     "width": 1200,
@@ -462,7 +502,7 @@ Generates a report image and returns the file information.
 
 **Example:**
 ```bash
-curl -X POST http://localhost:3000/api/reports/generate-image \
+curl -X POST http://localhost:3005/api/reports/generate-image \
   -H "Content-Type: application/json" \
   -d '{
     "width": 1200,
@@ -509,7 +549,7 @@ Retrieves all active alerts.
 
 **Example:**
 ```bash
-curl -X GET http://localhost:3000/api/alerts
+curl -X GET http://localhost:3005/api/alerts
 ```
 
 ### POST /api/alerts/:alertId/acknowledge
@@ -535,7 +575,7 @@ Acknowledges a specific alert.
 
 **Example:**
 ```bash
-curl -X POST http://localhost:3000/api/alerts/alert-123/acknowledge \
+curl -X POST http://localhost:3005/api/alerts/alert-123/acknowledge \
   -H "Content-Type: application/json" \
   -d '{
     "acknowledgedBy": "John Doe"
@@ -567,7 +607,35 @@ Retrieves alert statistics.
 
 **Example:**
 ```bash
-curl -X GET http://localhost:3000/api/alerts/stats
+curl -X GET http://localhost:3005/api/alerts/stats
+```
+
+### POST /api/alerts/test
+
+Creates a test alert for testing purposes.
+
+**Request Body:**
+```json
+{
+  "message": "Test alert message"
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "Test alert created and sent successfully"
+}
+```
+
+**Example:**
+```bash
+curl -X POST http://localhost:3005/api/alerts/test \
+  -H "Content-Type: application/json" \
+  -d '{
+    "message": "Test alert message"
+  }'
 ```
 
 ---
@@ -600,7 +668,30 @@ Retrieves all configured report schedules.
 
 **Example:**
 ```bash
-curl -X GET http://localhost:3000/api/schedules
+curl -X GET http://localhost:3005/api/schedules
+```
+
+### GET /api/schedules/:name
+
+Retrieves a specific schedule by name.
+
+**Parameters:**
+- `name` (path) - The name of the schedule to retrieve
+
+**Response:**
+```json
+{
+  "name": "daily-report",
+  "cron": "0 8 * * *",
+  "enabled": true,
+  "sendAsImage": false,
+  "description": "Daily backup report at 8 AM"
+}
+```
+
+**Example:**
+```bash
+curl -X GET http://localhost:3005/api/schedules/daily-report
 ```
 
 ### GET /api/schedule/status
@@ -620,7 +711,7 @@ Retrieves the status of the scheduling system.
 
 **Example:**
 ```bash
-curl -X GET http://localhost:3000/api/schedule/status
+curl -X GET http://localhost:3005/api/schedule/status
 ```
 
 ### POST /api/schedules
@@ -647,7 +738,7 @@ Creates a new report schedule.
 
 **Example:**
 ```bash
-curl -X POST http://localhost:3000/api/schedules \
+curl -X POST http://localhost:3005/api/schedules \
   -H "Content-Type: application/json" \
   -d '{
     "name": "hourly-status",
@@ -655,6 +746,40 @@ curl -X POST http://localhost:3000/api/schedules \
     "enabled": true,
     "sendAsImage": false,
     "description": "Hourly status check"
+  }'
+```
+
+### PUT /api/schedules/:name
+
+Updates an existing schedule.
+
+**Parameters:**
+- `name` (path) - The name of the schedule to update
+
+**Request Body:**
+```json
+{
+  "cron": "0 9 * * *",
+  "enabled": false,
+  "sendAsImage": true,
+  "description": "Updated schedule description"
+}
+```
+
+**Response:**
+```json
+{
+  "message": "Schedule updated successfully"
+}
+```
+
+**Example:**
+```bash
+curl -X PUT http://localhost:3005/api/schedules/daily-report \
+  -H "Content-Type: application/json" \
+  -d '{
+    "cron": "0 9 * * *",
+    "enabled": false
   }'
 ```
 
@@ -674,7 +799,7 @@ Deletes a specific schedule.
 
 **Example:**
 ```bash
-curl -X DELETE http://localhost:3000/api/schedules/hourly-status
+curl -X DELETE http://localhost:3005/api/schedules/hourly-status
 ```
 
 ---
@@ -685,7 +810,15 @@ curl -X DELETE http://localhost:3000/api/schedules/hourly-status
 
 Tests the WhatsApp service connectivity.
 
-**Response:**
+**Request Body (Optional):**
+```json
+{
+  "message": "Test message",
+  "chatId": "120363215673098371@g.us"
+}
+```
+
+**Response (Success):**
 ```json
 {
   "success": true,
@@ -693,16 +826,28 @@ Tests the WhatsApp service connectivity.
 }
 ```
 
+**Response (Failure):**
+```json
+{
+  "success": false,
+  "message": "WhatsApp test failed"
+}
+```
+
 **Example:**
 ```bash
-curl -X POST http://localhost:3000/api/test/whatsapp
+curl -X POST http://localhost:3005/api/test/whatsapp \
+  -H "Content-Type: application/json" \
+  -d '{
+    "message": "Test message"
+  }'
 ```
 
 ### POST /api/test/veeam
 
 Tests the Veeam API connectivity.
 
-**Response:**
+**Response (Success):**
 ```json
 {
   "success": true,
@@ -710,9 +855,18 @@ Tests the Veeam API connectivity.
 }
 ```
 
+**Response (Failure):**
+```json
+{
+  "success": false,
+  "message": "Veeam connection failed",
+  "error": "Connection timeout"
+}
+```
+
 **Example:**
 ```bash
-curl -X POST http://localhost:3000/api/test/veeam
+curl -X POST http://localhost:3005/api/test/veeam
 ```
 
 ---
@@ -725,8 +879,19 @@ Serves static report files (HTML reports, images, etc.).
 
 **Example:**
 ```bash
-curl -X GET http://localhost:3000/reports/veeam-report-20240115.html
-curl -X GET http://localhost:3000/reports/images/veeam-report-20240115.png
+curl -X GET http://localhost:3005/reports/veeam-report-20240115.html
+curl -X GET http://localhost:3005/reports/images/veeam-report-20240115.png
+```
+
+### GET /config
+
+Serves the configuration management web interface.
+
+**Response:** HTML configuration page
+
+**Example:**
+```bash
+curl -X GET http://localhost:3005/config
 ```
 
 ---
@@ -737,7 +902,7 @@ curl -X GET http://localhost:3000/reports/images/veeam-report-20240115.png
 
 ```javascript
 // Fetch system overview for dashboard
-const response = await fetch('http://localhost:3000/api/reports/quick-status');
+const response = await fetch('http://localhost:3005/api/reports/quick-status');
 const status = await response.json();
 console.log(`Overall Status: ${status.overallStatus}`);
 ```
@@ -746,7 +911,7 @@ console.log(`Overall Status: ${status.overallStatus}`);
 
 ```javascript
 // Check for critical alerts
-const alerts = await fetch('http://localhost:3000/api/alerts');
+const alerts = await fetch('http://localhost:3005/api/alerts');
 const alertData = await alerts.json();
 const criticalAlerts = alertData.filter(alert => alert.severity === 'critical');
 ```
@@ -755,12 +920,12 @@ const criticalAlerts = alertData.filter(alert => alert.severity === 'critical');
 
 ```javascript
 // Send daily report via WhatsApp
-const reportResponse = await fetch('http://localhost:3000/api/reports/send', {
+const reportResponse = await fetch('http://localhost:3005/api/reports/send', {
   method: 'POST',
   headers: { 'Content-Type': 'application/json' },
   body: JSON.stringify({
-    format: 'text',
-    includeImage: true
+    type: 'daily',
+    format: 'text'
   })
 });
 ```
@@ -769,7 +934,7 @@ const reportResponse = await fetch('http://localhost:3000/api/reports/send', {
 
 ```javascript
 // Update alerting thresholds
-const configResponse = await fetch('http://localhost:3000/api/config/alerting', {
+const configResponse = await fetch('http://localhost:3005/api/config/alerting', {
   method: 'PUT',
   headers: { 'Content-Type': 'application/json' },
   body: JSON.stringify({
@@ -779,6 +944,24 @@ const configResponse = await fetch('http://localhost:3000/api/config/alerting', 
     }
   })
 });
+```
+
+### 5. Health Monitoring
+
+```javascript
+// Monitor system health
+const healthCheck = async () => {
+  const [systemHealth, veeamHealth] = await Promise.all([
+    fetch('http://localhost:3005/health'),
+    fetch('http://localhost:3005/api/health/veeam')
+  ]);
+  
+  const systemStatus = await systemHealth.json();
+  const veeamStatus = await veeamHealth.json();
+  
+  console.log('System:', systemStatus.status);
+  console.log('Veeam:', veeamStatus.veeamApi.status);
+};
 ```
 
 ---
@@ -816,6 +999,16 @@ When the Veeam server is unreachable:
 }
 ```
 
+### WhatsApp Integration Issues
+
+```json
+{
+  "success": false,
+  "message": "WhatsApp test failed",
+  "error": "Webhook service not accessible"
+}
+```
+
 ---
 
 ## 📊 Response Headers
@@ -828,44 +1021,98 @@ X-Powered-By: Express
 X-RateLimit-Limit: 100
 X-RateLimit-Remaining: 95
 X-RateLimit-Reset: 1642248600
+Content-Security-Policy: default-src 'self';base-uri 'self';font-src 'self' https: data:;form-action 'self';frame-ancestors 'self';img-src 'self' data:;object-src 'none';script-src 'self';script-src-attr 'none';style-src 'self' https: 'unsafe-inline';upgrade-insecure-requests
+Cross-Origin-Opener-Policy: same-origin
+Cross-Origin-Resource-Policy: same-origin
 ```
 
 ---
 
 ## 🚀 Getting Started
 
-1. **Start the server:**
+1. **Check system health:**
    ```bash
-   npm start
+   curl http://localhost:3005/health
    ```
 
-2. **Test connectivity:**
+2. **Test Veeam connectivity:**
    ```bash
-   curl http://localhost:3000/health
+   curl -X POST http://localhost:3005/api/test/veeam
    ```
 
-3. **Check Veeam connection:**
+3. **Get current configuration:**
    ```bash
-   curl -X POST http://localhost:3000/api/test/veeam
+   curl http://localhost:3005/api/config
    ```
 
 4. **Get daily report:**
    ```bash
-   curl http://localhost:3000/api/reports/daily
+   curl http://localhost:3005/api/reports/daily
+   ```
+
+5. **Check active alerts:**
+   ```bash
+   curl http://localhost:3005/api/alerts
    ```
 
 ---
 
-## 📞 Support
+## 🔧 Configuration Management
 
-For technical support or questions about the API:
+The system can be configured through:
 
-- **Documentation:** This file
-- **Logs:** Check `logs/combined.log` for detailed information
-- **Configuration:** Modify `config.json` for customization
-- **Health Check:** Use `/health` and `/api/health/veeam` endpoints
+1. **Web Interface:** `http://localhost:3005/config`
+2. **API Endpoints:** `/api/config` and `/api/config/:section`
+3. **Environment Variables:** `.env` file
+4. **Configuration Files:** `config/default-config.json`
+
+### Key Configuration Sections:
+
+- **Server:** Port, host, CORS, rate limiting
+- **Veeam:** API connection settings
+- **WhatsApp:** Webhook URL and chat ID
+- **Alerting:** Thresholds, notifications, quiet hours
+- **Reporting:** Schedules, timezone, formats
+- **Monitoring:** Data collection intervals, health checks
+- **Logging:** Log levels, file management
 
 ---
 
-*Last Updated: January 15, 2024*
-*API Version: 1.0.0*
+## 📞 Support & Troubleshooting
+
+### Common Issues:
+
+1. **WhatsApp Integration Not Working:**
+   - Verify webhook service is running on `10.60.10.59:8192`
+   - Check network connectivity between servers
+   - Validate chat ID format
+
+2. **Veeam Connection Issues:**
+   - Use `/api/test/veeam` to test connectivity
+   - Check Veeam server credentials and URL
+   - Verify SSL/TLS settings
+
+3. **Configuration Problems:**
+   - Use `/api/config` to view current settings
+   - Check environment variables in `.env` file
+   - Validate JSON format in configuration updates
+
+### Monitoring:
+
+- **Health Endpoints:** `/health` and `/api/health/veeam`
+- **Log Files:** `logs/combined.log` and `logs/error.log`
+- **Alert Statistics:** `/api/alerts/stats`
+- **Schedule Status:** `/api/schedule/status`
+
+### Support Resources:
+
+- **Documentation:** This file
+- **Configuration Interface:** `http://localhost:3005/config`
+- **System Logs:** Available in `logs/` directory
+- **Test Endpoints:** `/api/test/veeam` and `/api/test/whatsapp`
+
+---
+
+*Last Updated: August 27, 2025*  
+*API Version: 1.0.0*  
+*Base URL: http://localhost:3005*

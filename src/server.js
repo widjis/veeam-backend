@@ -131,8 +131,24 @@ class VeeamBackendServer {
     setupMiddleware() {
         const config = this.configManager.getAll();
         
-        // Security middleware
-        this.app.use(helmet());
+        // Security middleware - disable HTTPS upgrade for HTTP-only environments
+        this.app.use(helmet({
+            contentSecurityPolicy: {
+                directives: {
+                    defaultSrc: ["'self'"],
+                    baseUri: ["'self'"],
+                    fontSrc: ["'self'", "https:", "data:"],
+                    formAction: ["'self'"],
+                    frameAncestors: ["'self'"],
+                    imgSrc: ["'self'", "data:"],
+                    objectSrc: ["'none'"],
+                    scriptSrc: ["'self'"],
+                    scriptSrcAttr: ["'none'"],
+                    styleSrc: ["'self'", "https:", "'unsafe-inline'"]
+                    // Removed 'upgrade-insecure-requests' to allow HTTP access
+                }
+            }
+        }));
         
         // CORS
         if (config.server.cors.enabled) {
