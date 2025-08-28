@@ -526,6 +526,55 @@
                         </div>
                     </div>
                 </div>
+
+                <!-- Syslog Configuration -->
+                <div class="section">
+                    <div class="section-header" data-toggle="section">
+                        <h3>📡 Syslog Settings</h3>
+                        <span class="toggle-icon">▼</span>
+                    </div>
+                    <div class="section-content">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="syslog-port">Syslog Port</label>
+                                <input type="number" min="1" max="65535" id="syslog-port" name="syslog.port" placeholder="514">
+                                <small class="form-text">Port for receiving syslog messages from Veeam</small>
+                            </div>
+                            <div class="form-group">
+                                <label for="syslog-host">Syslog Host</label>
+                                <input type="text" id="syslog-host" name="syslog.host" placeholder="0.0.0.0">
+                                <small class="form-text">Host address to bind syslog receiver</small>
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="syslog-severityThreshold">Alert Severity Threshold</label>
+                                <select id="syslog-severityThreshold" name="syslog.severityThreshold">
+                                    <option value="0">Emergency (0) - System unusable</option>
+                                    <option value="1">Alert (1) - Action must be taken</option>
+                                    <option value="2">Critical (2) - Critical conditions</option>
+                                    <option value="3">Error (3) - Error conditions</option>
+                                    <option value="4">Warning (4) - Warning conditions</option>
+                                    <option value="5">Notice (5) - Normal but significant</option>
+                                    <option value="6">Info (6) - Informational messages</option>
+                                    <option value="7">Debug (7) - Debug-level messages</option>
+                                </select>
+                                <small class="form-text">Events at or below this severity level will trigger WhatsApp alerts</small>
+                            </div>
+                            <div class="form-group">
+                                <label for="syslog-enabled">Enable Syslog Receiver</label>
+                                <select id="syslog-enabled" name="syslog.enabled">
+                                    <option value="true">Enabled</option>
+                                    <option value="false">Disabled</option>
+                                </select>
+                                <small class="form-text">Enable or disable the syslog receiver service</small>
+                            </div>
+                        </div>
+                        <div class="section-actions" style="margin-top: 20px; padding-top: 15px; border-top: 1px solid #e0e0e0; text-align: right;">
+                            <button type="button" class="btn btn-success btn-section" data-section="syslog" style="background: #28a745; padding: 10px 20px; font-size: 14px;">💾 Save Syslog Settings</button>
+                        </div>
+                    </div>
+                </div>
             </form>
         </div>
 

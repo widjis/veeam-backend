@@ -110,6 +110,18 @@ class DataCollectionService {
       };
 
       const data = await this.apiClient.get('/api/v1/sessions', params);
+      
+      // Normalize session data
+      if (data.data) {
+        data.data = data.data.map(session => {
+          return {
+            ...session,
+            result: this.normalizeSessionResult(session.result),
+            jobName: this.normalizeJobName(session.jobName)
+          };
+        });
+      }
+      
       this.setCachedData(cacheKey, data);
       this.logger.info(`Collected ${data.data?.length || 0} sessions`);
       return data;
@@ -229,26 +241,86 @@ class DataCollectionService {
       const failedJobs = [];
       const now = moment();
       
+      this.logger.info(`[DEBUG] getFailedJobs: Processing ${jobStates.data?.length || 0} jobs`);
+      
       if (jobStates.data) {
         jobStates.data.forEach(job => {
-          if (job.lastResult && job.lastResult !== 'Success') {
-            const lastRun = moment(job.lastRun);
-            if (now.diff(lastRun, 'hours') <= hours) {
-              // Get recent sessions for this job
-              const jobSessions = recentSessions.data?.filter(session => 
-                session.jobId === job.id && session.result !== 'Success'
-              ) || [];
-              
-              failedJobs.push({
-                ...job,
-                recentFailedSessions: jobSessions
-              });
-            }
+          this.logger.debug(`[DEBUG] Processing job in getFailedJobs:`, {
+            jobId: job.id,
+            jobName: job.name,
+            originalResult: job.lastResult,
+            lastRun: job.lastRun
+          });
+          
+          // Validate job data before processing
+          if (!this.isValidJobData(job)) {
+            this.logger.debug(`[DEBUG] Skipping invalid job data:`, { 
+              jobId: job.id, 
+              jobName: job.name, 
+              lastResult: job.lastResult,
+              reason: 'Failed isValidJobData check'
+            });
+            return;
+          }
+          
+          const normalizedResult = this.normalizeJobResult(job.lastResult);
+          
+          this.logger.debug(`[DEBUG] Job result normalization:`, {
+            jobId: job.id,
+            originalResult: job.lastResult,
+            normalizedResult: normalizedResult
+          });
+          
+          // Skip if result is null (invalid), Success, or Unknown
+          if (!normalizedResult || normalizedResult === 'Success' || normalizedResult === 'Unknown') {
+            this.logger.debug(`[DEBUG] Skipping job due to result filter:`, {
+              jobId: job.id,
+              normalizedResult: normalizedResult,
+              reason: 'Result is null, Success, or Unknown'
+            });
+            return;
+          }
+          
+          const lastRun = moment(job.lastRun);
+          const hoursDiff = now.diff(lastRun, 'hours');
+          
+          this.logger.debug(`[DEBUG] Checking time filter:`, {
+            jobId: job.id,
+            lastRun: job.lastRun,
+            hoursDiff: hoursDiff,
+            maxHours: hours
+          });
+          
+          if (hoursDiff <= hours) {
+            // Get recent sessions for this job
+            const jobSessions = recentSessions.data?.filter(session => {
+              const sessionResult = this.normalizeJobResult(session.result?.result || session.result);
+              return session.jobId === job.id && sessionResult && sessionResult !== 'Success' && sessionResult !== 'Unknown';
+            }) || [];
+            
+            this.logger.info(`[DEBUG] Adding failed job:`, {
+              jobId: job.id,
+              jobName: job.name,
+              normalizedResult: normalizedResult,
+              sessionsCount: jobSessions.length
+            });
+            
+            failedJobs.push({
+              ...job,
+              lastResult: normalizedResult,
+              recentFailedSessions: jobSessions
+            });
+          } else {
+            this.logger.debug(`[DEBUG] Skipping job due to time filter:`, {
+              jobId: job.id,
+              hoursDiff: hoursDiff,
+              maxHours: hours
+            });
           }
         });
       }
       
-      this.logger.info(`Found ${failedJobs.length} failed jobs in last ${hours} hours`);
+      this.logger.info(`[DEBUG] getFailedJobs result: Found ${failedJobs.length} failed jobs in last ${hours} hours`);
       return failedJobs;
     } catch (error) {
       this.logger.error('Failed to get failed jobs:', error.message);
@@ -419,6 +491,87 @@ class DataCollectionService {
   clearCache() {
     this.cache.clear();
     this.logger.info('Data collection cache cleared');
+  }
+
+  // Helper method to validate job data
+  isValidJobData(job) {
+    if (!job || !job.id) {
+      return false;
+    }
+    
+    // Check if job has a valid name
+    const hasValidName = job.name && job.name.trim() !== '' && job.name !== 'Unknown Job';
+    
+    // Check if job has a valid result (not None, null, undefined, or empty)
+    const hasValidResult = job.lastResult && 
+                          job.lastResult !== 'None' && 
+                          job.lastResult !== 'null' && 
+                          job.lastResult !== 'undefined' && 
+                          job.lastResult.trim() !== '';
+    
+    return hasValidName && hasValidResult;
+  }
+
+  // Helper method to normalize job results
+  normalizeJobResult(result) {
+    if (!result || result === 'None' || result === 'null' || result === 'undefined' || result === '') {
+      return null; // Return null for invalid results
+    }
+    
+    // Handle nested result objects
+    if (typeof result === 'object' && result.result) {
+      result = result.result;
+    }
+    
+    const normalizedResult = String(result).trim();
+    
+    switch (normalizedResult.toLowerCase()) {
+      case 'success':
+      case 'successful':
+      case 'completed':
+        return 'Success';
+      case 'warning':
+      case 'warnings':
+        return 'Warning';
+      case 'failed':
+      case 'failure':
+      case 'error':
+        return 'Failed';
+      case 'critical':
+        return 'Critical';
+      default:
+        // Only return the result if it's a meaningful value
+        return normalizedResult.length > 0 ? normalizedResult : null;
+    }
+  }
+
+  // Helper method to normalize session results
+  normalizeSessionResult(result) {
+    if (!result) {
+      return null;
+    }
+    
+    // Handle nested result objects
+    if (typeof result === 'object') {
+      const normalizedResult = {
+        result: this.normalizeJobResult(result.result),
+        message: result.message || ''
+      };
+      
+      // Only return if we have a valid result
+      return normalizedResult.result ? normalizedResult : null;
+    }
+    
+    return this.normalizeJobResult(result);
+  }
+
+  // Helper method to normalize job names
+  normalizeJobName(jobName) {
+    if (!jobName || jobName.trim() === '' || jobName === 'Unknown Job') {
+      return null; // Return null for invalid job names
+    }
+    
+    return jobName.trim();
   }
 }
 

@@ -277,6 +277,13 @@ function populateForm(config) {
         setValue('logging.enableConsole', config.logging.enableConsole);
         setValue('logging.enableFile', config.logging.enableFile);
     }
+
+    if (config.syslog) {
+        setValue('syslog.port', config.syslog.port);
+        setValue('syslog.host', config.syslog.host);
+        setValue('syslog.enabled', config.syslog.enabled);
+        setValue('syslog.severityThreshold', config.syslog.severityThreshold);
+    }
 }
 
 function populateSchedulerTasks(schedules) {

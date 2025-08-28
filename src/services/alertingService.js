@@ -156,6 +156,36 @@ class AlertingService {
     return null;
   }
 
+  // Acknowledge all active alerts
+  acknowledgeAllAlerts(acknowledgedBy = 'system') {
+    const acknowledgedAlerts = [];
+    const timestamp = new Date().toISOString();
+    
+    // Process all active alerts
+    Array.from(this.activeAlerts.values()).forEach(alert => {
+      if (!alert.acknowledged) {
+        alert.acknowledged = true;
+        alert.acknowledgedAt = timestamp;
+        alert.acknowledgedBy = acknowledgedBy;
+        
+        this.acknowledgedAlerts.set(alert.id, alert);
+        acknowledgedAlerts.push(alert);
+      }
+    });
+    
+    // Clear all active alerts
+    this.activeAlerts.clear();
+    this.saveAlerts();
+    
+    this.logger.info(`Bulk acknowledged ${acknowledgedAlerts.length} alerts by ${acknowledgedBy}`);
+    return {
+      count: acknowledgedAlerts.length,
+      alerts: acknowledgedAlerts,
+      acknowledgedBy,
+      acknowledgedAt: timestamp
+    };
+  }
+
   // Resolve an alert
   resolveAlert(alertId, resolvedBy = 'system') {
     const alert = this.activeAlerts.get(alertId) || this.acknowledgedAlerts.get(alertId);
@@ -259,26 +289,81 @@ class AlertingService {
     try {
       const failedJobs = await this.dataService.getFailedJobs(1); // Last hour
       
+      this.logger.info(`[DEBUG] checkJobFailures: Processing ${failedJobs.length} failed jobs`);
+      
       failedJobs.forEach(job => {
+        this.logger.info(`[DEBUG] Processing job:`, {
+          jobId: job.id,
+          jobName: job.name,
+          originalResult: job.lastResult,
+          lastRun: job.lastRun
+        });
+        
+        // Validate job data before creating alert
+        if (!this.isValidJobData(job)) {
+          this.logger.warn(`[DEBUG] Skipping invalid job data for job failure check:`, { 
+            jobId: job.id, 
+            jobName: job.name, 
+            lastResult: job.lastResult,
+            reason: 'Failed isValidJobData check'
+          });
+          return;
+        }
+        
+        const jobName = this.resolveJobName(job);
+        const originalResult = job.lastResult;
+        const normalizedResult = this.normalizeResult(job.lastResult);
+        
+        this.logger.info(`[DEBUG] Job validation passed:`, {
+          jobId: job.id,
+          resolvedJobName: jobName,
+          originalResult: originalResult,
+          normalizedResult: normalizedResult
+        });
+        
+        // Skip if result is not actually a failure
+        if (normalizedResult === 'Success' || normalizedResult === 'Unknown') {
+          this.logger.info(`[DEBUG] Skipping job due to result filter:`, {
+            jobId: job.id,
+            jobName: jobName,
+            normalizedResult: normalizedResult,
+            reason: 'Result is Success or Unknown'
+          });
+          return;
+        }
+        
         const alertKey = `job_failure_${job.id}`;
         const existingAlert = Array.from(this.activeAlerts.values())
           .find(alert => alert.metadata.jobId === job.id && alert.type === 'job_failure');
         
         if (!existingAlert) {
-          const severity = job.lastResult === 'Failed' ? 'critical' : 'warning';
+          this.logger.info(`[DEBUG] Creating new job failure alert:`, {
+            jobId: job.id,
+            jobName: jobName,
+            normalizedResult: normalizedResult
+          });
+          
+          const severity = normalizedResult === 'Failed' ? 'critical' : 'warning';
           this.createAlert(
             'job_failure',
             severity,
-            `Backup Job Failed: ${job.name}`,
-            `Job "${job.name}" failed with result: ${job.lastResult}. Last run: ${moment(job.lastRun).format('YYYY-MM-DD HH:mm:ss')}`,
+            `Backup Job Failed: ${jobName}`,
+            `Job "${jobName}" failed with result: ${normalizedResult}. Last run: ${moment(job.lastRun).format('YYYY-MM-DD HH:mm:ss')}`,
             {
               jobId: job.id,
-              jobName: job.name,
-              lastResult: job.lastResult,
+              jobName: jobName,
+              lastResult: normalizedResult,
+              originalResult: originalResult,
               lastRun: job.lastRun,
               message: job.message || 'No additional details available'
             }
           );
+        } else {
+          this.logger.info(`[DEBUG] Skipping job - existing alert found:`, {
+            jobId: job.id,
+            jobName: jobName,
+            existingAlertId: existingAlert.id
+          });
         }
       });
     } catch (error) {
@@ -422,6 +507,11 @@ class AlertingService {
       
       // Check for newly started jobs
       runningSessions.forEach(session => {
+        if (!this.isValidSessionData(session)) {
+          this.logger.warn(`Skipping invalid session data for job start check:`, { sessionId: session.id, jobName: session.jobName });
+          return;
+        }
+        
         if (session.creationTime) {
           const startTime = moment(session.creationTime);
           const minutesAgo = moment().diff(startTime, 'minutes');
@@ -432,14 +522,15 @@ class AlertingService {
               .find(alert => alert.metadata.sessionId === session.id && alert.type === 'job_started');
             
             if (!existingAlert) {
+              const jobName = this.resolveJobName(session);
               this.createAlert(
                 'job_started',
                 'info',
-                `Backup Job Started: ${session.jobName || 'Unknown Job'}`,
-                `Backup job "${session.jobName || 'Unknown Job'}" has started at ${startTime.format('HH:mm:ss')}.`,
+                `Backup Job Started: ${jobName}`,
+                `Backup job "${jobName}" has started at ${startTime.format('HH:mm:ss')}.`,
                 {
                   sessionId: session.id,
-                  jobName: session.jobName,
+                  jobName: jobName,
                   startTime: session.creationTime,
                   state: session.state
                 }
@@ -452,15 +543,26 @@ class AlertingService {
       // Check for recently completed jobs
       if (recentSessions?.data) {
         recentSessions.data.forEach(session => {
+          if (!this.isValidSessionData(session)) {
+            this.logger.warn(`Skipping invalid session data for job completion check:`, { sessionId: session.id, jobName: session.jobName });
+            return;
+          }
+          
           if (session.endTime) {
             const endTime = moment(session.endTime);
             const minutesAgo = moment().diff(endTime, 'minutes');
             
             // Alert for jobs that completed in the last 5 minutes
             if (minutesAgo <= 5) {
-              // Extract result from nested object structure
-              const resultValue = session.result?.result || session.result || 'Unknown';
+              const jobName = this.resolveJobName(session);
+              const resultValue = this.normalizeResult(session.result?.result || session.result);
               const resultMessage = session.result?.message || 'No additional details';
+              
+              // Skip alerts for unknown or invalid results
+              if (resultValue === 'Unknown') {
+                this.logger.warn(`Skipping alert for session with unknown result:`, { sessionId: session.id, jobName: jobName, result: session.result });
+                return;
+              }
               
               const severity = resultValue === 'Success' ? 'info' : 
                              resultValue === 'Warning' ? 'warning' : 'critical';
@@ -472,11 +574,11 @@ class AlertingService {
                 this.createAlert(
                   'job_completed',
                   severity,
-                  `Backup Job ${resultValue}: ${session.jobName || 'Unknown Job'}`,
-                  `Backup job "${session.jobName || 'Unknown Job'}" completed with result: ${resultValue} at ${endTime.format('HH:mm:ss')}. ${resultMessage}`,
+                  `Backup Job ${resultValue}: ${jobName}`,
+                  `Backup job "${jobName}" completed with result: ${resultValue} at ${endTime.format('HH:mm:ss')}. ${resultMessage}`,
                   {
                     sessionId: session.id,
-                    jobName: session.jobName,
+                    jobName: jobName,
                     result: resultValue,
                     resultMessage: resultMessage,
                     endTime: session.endTime,
@@ -572,6 +674,86 @@ class AlertingService {
   // Get acknowledged alerts
   getAcknowledgedAlerts() {
     return Array.from(this.acknowledgedAlerts.values());
+  }
+
+  // Helper method to validate job data
+  isValidJobData(job) {
+    if (!job || !job.id) {
+      return false;
+    }
+    
+    // Check if job has a valid name or can be resolved
+    const hasValidName = job.name && job.name.trim() !== '' && job.name !== 'Unknown Job';
+    const hasValidResult = job.lastResult && job.lastResult !== 'None' && job.lastResult !== 'Unknown';
+    
+    return hasValidName || hasValidResult;
+  }
+
+  // Helper method to validate session data
+  isValidSessionData(session) {
+    if (!session || !session.id) {
+      return false;
+    }
+    
+    // Check if session has a valid job name or can be resolved
+    const hasValidName = session.jobName && session.jobName.trim() !== '' && session.jobName !== 'Unknown Job';
+    const hasValidResult = session.result && session.result !== 'None' && session.result !== 'Unknown';
+    
+    return hasValidName || hasValidResult;
+  }
+
+  // Helper method to resolve job names
+  resolveJobName(jobOrSession) {
+    if (!jobOrSession) {
+      return 'Unknown Job';
+    }
+    
+    // Try to get name from different possible fields
+    const name = jobOrSession.name || jobOrSession.jobName || jobOrSession.displayName;
+    
+    if (name && name.trim() !== '' && name !== 'Unknown Job') {
+      return name.trim();
+    }
+    
+    // If we have an ID, try to use it as fallback
+    if (jobOrSession.id) {
+      return `Job-${jobOrSession.id.substring(0, 8)}`;
+    }
+    
+    return 'Unknown Job';
+  }
+
+  // Helper method to normalize result values
+  normalizeResult(result) {
+    if (!result || result === 'None' || result === '') {
+      return 'Unknown';
+    }
+    
+    // Handle nested result objects
+    if (typeof result === 'object' && result.result) {
+      result = result.result;
+    }
+    
+    // Normalize common result values
+    const normalizedResult = String(result).trim();
+    
+    switch (normalizedResult.toLowerCase()) {
+      case 'success':
+      case 'successful':
+      case 'completed':
+        return 'Success';
+      case 'warning':
+      case 'warnings':
+        return 'Warning';
+      case 'failed':
+      case 'failure':
+      case 'error':
+        return 'Failed';
+      case 'critical':
+        return 'Critical';
+      default:
+        return normalizedResult || 'Unknown';
+    }
   }
 }
 

@@ -142,6 +142,16 @@ class ConfigManager {
                 enableFile: Joi.boolean().default(true)
             }).default({}),
             
+            syslog: Joi.object({
+                enabled: Joi.boolean().default(true),
+                port: Joi.number().default(514),
+                host: Joi.string().default('0.0.0.0'),
+                autoStart: Joi.boolean().default(true),
+                parseVeeamEvents: Joi.boolean().default(true),
+                createAlertsFromEvents: Joi.boolean().default(true),
+                severityThreshold: Joi.number().default(3) // Only create alerts for severity 3 and below (error/critical)
+            }).default({}),
+            
             server: Joi.object({
                 port: Joi.number().default(3000),
                 host: Joi.string().default('localhost'),
@@ -268,6 +278,15 @@ class ConfigManager {
                 maxSize: '10m',
                 enableConsole: true,
                 enableFile: true
+            },
+            syslog: {
+                enabled: true,
+                port: parseInt(process.env.SYSLOG_PORT) || 514,
+                host: process.env.SYSLOG_HOST || '0.0.0.0',
+                autoStart: true,
+                parseVeeamEvents: true,
+                createAlertsFromEvents: true,
+                severityThreshold: parseInt(process.env.SYSLOG_SEVERITY_THRESHOLD) || 3
             },
             server: {
                 port: parseInt(process.env.SERVER_PORT) || 3000,
@@ -416,9 +435,24 @@ class ConfigManager {
             throw new Error(`Configuration validation failed for section '${section}': ${error.message}`);
         }
         
-        // Update the configuration and save to file without full validation
+        // Update the configuration
         this.config[section] = updatedSection;
-        await fs.writeJson(this.configFile, this.config, { spaces: 2 });
+        
+        // Preserve Veeam password before saving to file
+        const configToSave = { ...this.config };
+        if (!configToSave.veeam?.password && fs.existsSync(this.configFile)) {
+            try {
+                const existingConfig = await fs.readJson(this.configFile);
+                if (existingConfig.veeam?.password) {
+                    configToSave.veeam = { ...configToSave.veeam, password: existingConfig.veeam.password };
+                    this.config.veeam = { ...this.config.veeam, password: existingConfig.veeam.password };
+                }
+            } catch (readError) {
+                this.logger.warn('Could not read existing config for password preservation during section update', { error: readError.message });
+            }
+        }
+        
+        await fs.writeJson(this.configFile, configToSave, { spaces: 2 });
         this.logger.info(`Configuration section '${section}' saved successfully`);
         
         // Notify watchers

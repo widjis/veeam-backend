@@ -545,6 +545,22 @@ class WhatsAppService {
         
         return await this.sendMessage(message);
     }
+
+    /**
+     * Send bulk acknowledgment confirmation
+     * @param {number} count - Number of alerts acknowledged
+     * @param {string} acknowledgedBy - Who acknowledged the alerts
+     * @returns {Promise<boolean>} - Success status
+     */
+    async sendBulkAcknowledgment(count, acknowledgedBy = 'User') {
+        const message = `✅ *Bulk Alert Acknowledgment*\n\n` +
+                       `📊 Alerts acknowledged: ${count}\n` +
+                       `👤 Acknowledged by: ${acknowledgedBy}\n` +
+                       `🕐 Time: ${moment().format('YYYY-MM-DD HH:mm:ss')}\n\n` +
+                       `All active alerts have been acknowledged and moved to the acknowledged alerts list.`;
+        
+        return await this.sendMessage(message);
+    }
 }
 
 module.exports = WhatsAppService;

@@ -10,6 +10,7 @@ const cron = require('node-cron');
 const path = require('path');
 const winston = require('winston');
 const fs = require('fs-extra');
+const EventEmitter = require('events');
 
 // Import services
 const ConfigManager = require('./config/configManager');
@@ -19,9 +20,11 @@ const ReportingEngine = require('./services/reportingEngine');
 const AlertingService = require('./services/alertingService');
 const WhatsAppService = require('./services/whatsappService');
 const HtmlReportService = require('./services/htmlReportService');
+const SyslogService = require('./services/syslogService');
 
-class VeeamBackendServer {
+class VeeamBackendServer extends EventEmitter {
     constructor() {
+        super();
         this.app = express();
         this.server = null;
         this.scheduledJobs = new Map();
@@ -35,6 +38,7 @@ class VeeamBackendServer {
         this.alertingService = null;
         this.whatsappService = null;
         this.htmlReportService = null;
+        this.syslogService = null;
         
         // Initialize logger
         this.logger = winston.createLogger({
@@ -121,6 +125,18 @@ class VeeamBackendServer {
         
         // Initialize HTML report service
         this.htmlReportService = new HtmlReportService();
+        
+        // Initialize Syslog service
+        this.syslogService = new SyslogService(config.syslog || { port: 514, host: '0.0.0.0' });
+        
+        // Set up syslog event handlers
+        this.syslogService.on('veeamEvent', (eventData) => {
+            this.handleVeeamSyslogEvent(eventData);
+        });
+        
+        this.syslogService.on('error', (error) => {
+            this.logger.error('Syslog service error:', error);
+        });
         
         this.logger.info('All services initialized successfully');
     }
@@ -256,6 +272,21 @@ class VeeamBackendServer {
             try {
                 await this.configManager.updateSection(req.params.section, req.body);
                 res.json({ message: 'Configuration updated successfully' });
+            } catch (error) {
+                next(error);
+            }
+        });
+
+        // Syslog monitoring routes
+        router.get('/syslog/status', async (req, res, next) => {
+            try {
+                const stats = this.syslogService.getStats();
+                res.json({
+                    ...stats,
+                    isListening: this.syslogService.isListening(),
+                    port: this.syslogService.port,
+                    timestamp: new Date().toISOString()
+                });
             } catch (error) {
                 next(error);
             }
@@ -417,6 +448,26 @@ class VeeamBackendServer {
             }
         });
 
+        router.post('/alerts/acknowledge-all', async (req, res, next) => {
+            try {
+                const { acknowledgedBy = 'API User' } = req.body;
+                
+                const result = await this.alertingService.acknowledgeAllAlerts(acknowledgedBy);
+                
+                // Send bulk acknowledgment notification via WhatsApp
+                if (result.count > 0) {
+                    await this.whatsappService.sendBulkAcknowledgment(result.count, acknowledgedBy);
+                }
+                
+                res.json({
+                    message: `Successfully acknowledged ${result.count} alerts`,
+                    ...result
+                });
+            } catch (error) {
+                next(error);
+            }
+        });
+
         router.get('/alerts/stats', async (req, res, next) => {
             try {
                 const stats = await this.alertingService.getAlertStats();
@@ -465,6 +516,75 @@ class VeeamBackendServer {
             } catch (error) {
                 next(error);
             }
+        });
+
+        // Test endpoint for triggering monitoring execution
+        router.post('/monitoring/trigger', async (req, res, next) => {
+            try {
+                this.logger.info('Manual monitoring execution triggered via API');
+                await this.executeMonitoring();
+                
+                res.json({ 
+                    message: 'Monitoring execution completed successfully',
+                    timestamp: new Date().toISOString()
+                });
+            } catch (error) {
+                this.logger.error('Manual monitoring execution failed:', error.message);
+                next(error);
+            }
+        });
+
+        // Syslog service endpoints
+        router.post('/syslog/start', async (req, res, next) => {
+            try {
+                if (this.syslogService.isRunning) {
+                    return res.json({ 
+                        message: 'Syslog service is already running',
+                        stats: this.syslogService.getStats()
+                    });
+                }
+                
+                await this.syslogService.start();
+                this.logger.info('Syslog service started via API');
+                
+                res.json({ 
+                    message: 'Syslog service started successfully',
+                    stats: this.syslogService.getStats()
+                });
+            } catch (error) {
+                this.logger.error('Failed to start syslog service:', error.message);
+                next(error);
+            }
+        });
+
+        router.post('/syslog/stop', async (req, res, next) => {
+            try {
+                if (!this.syslogService.isRunning) {
+                    return res.json({ 
+                        message: 'Syslog service is not running',
+                        stats: this.syslogService.getStats()
+                    });
+                }
+                
+                await this.syslogService.stop();
+                this.logger.info('Syslog service stopped via API');
+                
+                res.json({ 
+                    message: 'Syslog service stopped successfully',
+                    stats: this.syslogService.getStats()
+                });
+            } catch (error) {
+                this.logger.error('Failed to stop syslog service:', error.message);
+                next(error);
+            }
+        });
+
+        router.get('/syslog/status', (req, res) => {
+            const stats = this.syslogService.getStats();
+            res.json({
+                status: stats.isRunning ? 'running' : 'stopped',
+                stats
+            });
         });
 
         // Data collection routes
@@ -809,6 +929,118 @@ class VeeamBackendServer {
     }
 
     /**
+     * Handle Veeam events received via syslog
+     */
+    async handleVeeamSyslogEvent(eventData) {
+        try {
+            this.logger.info('Received Veeam syslog event:', {
+                timestamp: eventData.timestamp,
+                hostname: eventData.hostname,
+                severity: eventData.severity,
+                message: eventData.message
+            });
+
+            // Extract Veeam-specific data
+            const veeamData = this.syslogService.extractVeeamData(eventData);
+            
+            // Debug logging - Full raw syslog message received from Veeam
+            this.logger.info('Full raw syslog message from Veeam:', {
+                rawMessage: eventData.raw,
+                parsedData: {
+                    facility: eventData.facility,
+                    severity: eventData.severity,
+                    timestamp: eventData.timestamp,
+                    hostname: eventData.hostname,
+                    appName: eventData.appName,
+                    procId: eventData.procId,
+                    msgId: eventData.msgId,
+                    structuredData: eventData.structuredData,
+                    message: eventData.message
+                }
+            });
+            
+            // Debug logging to see what data is extracted
+            this.logger.info('Extracted Veeam data:', {
+                description: veeamData.description,
+                Description: veeamData.Description,
+                message: veeamData.message,
+                jobName: veeamData.jobName,
+                JobID: veeamData.JobID,
+                JobSessionID: veeamData.JobSessionID
+            });
+            
+            // Process the event based on severity and content
+            const severityThreshold = parseInt(this.configManager.get('syslog.severityThreshold')) || 3;
+            if (eventData.severity <= severityThreshold) { // Check against configured threshold
+                
+                // Create a meaningful alert title and message based on extracted data
+                let alertTitle = 'Veeam System Event';
+                let message = veeamData.Description || veeamData.description || veeamData.eventMessage || veeamData.message || eventData.message || '';
+                
+                // Create more specific titles based on content
+                if (message.toLowerCase().includes('backup job')) {
+                    alertTitle = 'Veeam Backup Job Event';
+                } else if (message.toLowerCase().includes('session')) {
+                    alertTitle = 'Veeam Session Event';
+                } else if (message.toLowerCase().includes('repository')) {
+                    alertTitle = 'Veeam Repository Event';
+                } else if (veeamData.JobID) {
+                    alertTitle = `Veeam Job Event (ID: ${veeamData.JobID})`;
+                }
+                
+                // If we have a job name, include it in the title
+                if (veeamData.jobName) {
+                    alertTitle = `Veeam Job: ${veeamData.jobName}`;
+                }
+                
+                // Map syslog severity to alert severity
+                // Syslog severity: 0=Emergency, 1=Alert, 2=Critical, 3=Error, 4=Warning, 5=Notice, 6=Info, 7=Debug
+                let alertSeverity;
+                if (eventData.severity <= 2) {
+                    alertSeverity = 'critical';  // Emergency, Alert, Critical
+                } else if (eventData.severity <= 4) {
+                    alertSeverity = 'warning';   // Error, Warning
+                } else {
+                    alertSeverity = 'info';      // Notice, Info, Debug
+                }
+                
+                // Create an alert for events meeting the threshold
+                const alert = this.alertingService.createAlert(
+                    'syslog_event',
+                    alertSeverity,
+                    alertTitle,
+                    message,
+                    {
+                        source: 'syslog',
+                        hostname: eventData.hostname,
+                        timestamp: eventData.timestamp,
+                        jobId: veeamData.JobID,
+                        sessionId: veeamData.JobSessionID,
+                        severity: eventData.severity,
+                        raw: eventData.raw
+                    }
+                );
+                
+                this.logger.info('Created syslog alert:', {
+                    alertId: alert.id,
+                    title: alertTitle,
+                    severity: eventData.severity,
+                    message: message.substring(0, 100) + (message.length > 100 ? '...' : '')
+                });
+                
+                // Send the alert notification immediately
+                await this.alertingService.sendAlertNotification(alert);
+            }
+            
+            // Emit event for other services that might be interested
+            this.emit('veeamSyslogEvent', veeamData);
+            
+        } catch (error) {
+            this.logger.error('Error handling Veeam syslog event:', error);
+        }
+    }
+
+    /**
      * Get next scheduled execution time
      */
     getNextScheduleExecution(schedules) {
@@ -931,8 +1163,17 @@ class VeeamBackendServer {
             const port = config.server.port;
             const host = config.server.host;
             
-            this.server = this.app.listen(port, host, () => {
+            this.server = this.app.listen(port, host, async () => {
                 this.logger.info(`Veeam Backend Server started on ${host}:${port}`);
+                
+                // Start syslog service
+                try {
+                    await this.syslogService.start();
+                    this.logger.info('Syslog service started automatically');
+                } catch (error) {
+                    this.logger.warn('Failed to start syslog service automatically:', error.message);
+                }
+                
                 this.logger.info('Server is ready to accept requests');
             });
             
