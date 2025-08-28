@@ -1814,4 +1814,133 @@ curl -X POST http://localhost:3005/api/alerts/acknowledge-all \
 
 ---
 
-*Last Updated: August 28, 2025 4:14 PM*
+## August 28, 2025 8:29 PM - WhatsApp Configuration Update
+
+### Issue
+The main `config/config.json` file was missing the new WhatsApp group name configuration fields that were added to support both group names and chat IDs for WhatsApp messaging.
+
+### Solution
+Updated the main configuration file to include the new WhatsApp settings:
+- `groupName`: "MTI Alert!!" (default group name)
+- `useGroupName`: false (default to using chat ID)
+
+### Code Changes
+- **File**: `config/config.json` - Added `groupName` and `useGroupName` fields to WhatsApp configuration
+
+### Impact
+- **Complete**: All configuration files now include WhatsApp group name support
+- **Consistent**: Main config.json matches default-config.json structure
+- **Ready**: System fully configured for both group name and chat ID messaging
+
+---
+
+## August 28, 2025 8:31 PM - API Documentation Update
+
+### Issue
+The bulk acknowledge endpoint (`POST /api/alerts/acknowledge-all`) was implemented but not documented in the API documentation.
+
+### Solution
+Added comprehensive documentation for the bulk acknowledge endpoint including:
+- Request/response schemas
+- Optional `acknowledgedBy` parameter
+- Example curl commands for both default and custom user scenarios
+- Detailed response format with count, alerts array, and metadata
+
+### Code Changes
+- **File**: `API_DOCUMENTATION.md` - Added `POST /api/alerts/acknowledge-all` endpoint documentation
+
+### Impact
+- **Complete**: API documentation now includes all implemented alert endpoints
+- **Consistent**: Documentation format matches existing endpoint patterns
+- **Ready**: Developers can now reference complete API documentation for bulk operations
+
+---
+
+## August 28, 2025 - 9:21 PM
+
+### Configuration File Issue Resolution
+- **CRITICAL DISCOVERY**: Found that the application was using `./config/config.json` instead of the root `config.json`
+- **Root Cause**: ConfigManager initializes with `./config` directory, loads `config.json` from there
+- **Resolution**: Deleted the incorrect root `config.json` file to avoid confusion
+- **Verification**: Confirmed that `./config/config.json` has the correct WhatsApp configuration:
+  - `groupName`: "MTI Alert!!"
+  - `useGroupName`: true
+  - `chatId`: "120363215673098371@g.us"
+- **Impact**: This explains why previous configuration changes weren't taking effect
+- **Status**: Configuration file structure now properly aligned with application logic
+
+### WhatsApp Service Logic Bug Fix
+- **CRITICAL BUG**: Found flawed logic in `sendMessage` method conditional check
+- **Issue**: Condition `(!options.chatId && !this.chatId)` always evaluated to false because `this.chatId` exists
+- **Fix**: Updated logic to `(options.useGroupName === undefined && this.useGroupName)` to properly check instance setting
+- **Result**: Messages should now correctly use group name when `useGroupName` is true
+- **Files Modified**: `src/services/whatsappService.js`
+- **Status**: WhatsApp service logic now properly respects useGroupName configuration
+
+---
+
+## August 28, 2025 - 9:27 PM
+
+### Alerting Configuration Enforcement Fix
+- **CRITICAL ISSUE**: Alerts still being sent despite `alerting.enabled: false` configuration
+- **Root Cause Analysis**: Two methods in `server.js` were completely ignoring the `alerting.enabled` setting:
+  1. `executeMonitoring()` method - Always executed alert checks and sent pending alerts regardless of configuration
+  2. `handleVeeamSyslogEvent()` method - Always created and sent alerts from syslog events regardless of configuration
+- **Technical Details**:
+  - Monitoring interval was calling `alertingService.runAlertChecks()` and `alertingService.sendPendingAlerts()` unconditionally
+  - Syslog event handler was calling `alertingService.createAlert()` and `alertingService.sendAlertNotification()` unconditionally
+  - No validation of `alerting.enabled` configuration in either code path
+- **Resolution**:
+  - **Modified `executeMonitoring()` method**: Added `alertingEnabled` check before running alert operations
+  - **Modified `handleVeeamSyslogEvent()` method**: Added `alertingEnabled` check before creating syslog-based alerts
+  - **Added debug logging**: System now logs when alerting operations are skipped due to disabled configuration
+- **Files Modified**:
+  - `src/server.js` - lines 915-933 (`executeMonitoring` method)
+  - `src/server.js` - lines 978-1050 (`handleVeeamSyslogEvent` method)
+- **Impact**:
+  - **Polling alerts**: Now properly disabled when `alerting.enabled: false`
+  - **Syslog alerts**: Now properly disabled when `alerting.enabled: false`
+  - **User control**: System now respects user's choice to disable all alerting
+  - **Syslog logging**: Events are still processed and logged, but no alert notifications are sent
+  - **Performance**: Reduces unnecessary alert processing when alerting is intentionally disabled
+- **Status**: Alerting system now fully respects the `alerting.enabled` configuration setting
+
+---
+
+## 2025-08-28 22:20:00 - Daily Reporting Schedule Fix
+
+**Issue**: Daily reports were not being sent despite working correctly in Docker deployment. Local development environment was missing proper reporting schedule configuration.
+
+**Root Cause**: 
+- Only one daily report schedule was configured locally vs. 3 working schedules in production Docker deployment
+- Missing proper schedule configuration matching the working Docker deployment at `https://alerting.merdekabattery.com`
+- Local configuration had different timing and fewer schedules than production
+
+**Investigation Process**:
+1. **Tested Docker deployment**: Confirmed `https://alerting.merdekabattery.com` had 3 working daily report schedules
+2. **Compared configurations**: Found discrepancies between local and production reporting schedules
+3. **Identified missing schedules**: Local environment only had 1 schedule vs. 3 in production
+
+**Resolution**:
+1. **Added multiple schedules**: Configured 3 daily report schedules matching production:
+   - "Daily Report" at 06:00 UTC
+   - "Daily report 1" at 21:45 UTC  
+   - "Daily report 2" at 22:00 UTC
+2. **Updated schedule timing**: Changed main daily report from 09:00 to 06:00 UTC
+3. **Verified configuration**: All schedules include charts and send as images
+4. **Maintained alerting settings**: Kept `alerting.enabled: false` as intended for local development
+
+**Files Modified**:
+- `config/config.json`: Updated reporting schedules to match production
+
+**Impact**:
+- Daily reports are now properly scheduled and will be sent at configured times
+- Local development environment matches production reporting configuration
+- 3 daily report schedules are active and running
+- Server shows "4 scheduled jobs" (3 daily reports + 1 default schedule)
+- Next execution properly scheduled for 22:00 UTC
+- Alerting remains disabled for local development as intended
+
+---
+
+*Last Updated: August 28, 2025 10:20 PM*

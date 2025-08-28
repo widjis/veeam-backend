@@ -171,11 +171,21 @@ The system uses a hierarchical configuration system:
   "whatsapp": {
     "webhookUrl": "http://your-webhook-server/send-message",
     "chatId": "your-chat-id",
+    "groupName": "MTI Alert!!",
+    "useGroupName": false,
     "maxRetries": 3,
     "retryInterval": 5000
   }
 }
 ```
+
+**WhatsApp Configuration Options:**
+- `webhookUrl`: WhatsApp webhook endpoint URL
+- `chatId`: WhatsApp chat ID (e.g., `120363215673098371@g.us`) - used when `useGroupName` is false
+- `groupName`: WhatsApp group name (e.g., `MTI Alert!!`) - used when `useGroupName` is true
+- `useGroupName`: Boolean flag to use group name instead of chat ID
+- `maxRetries`: Number of retry attempts for failed messages
+- `retryInterval`: Delay between retry attempts in milliseconds
 
 #### Alerting Thresholds
 ```json

@@ -9,6 +9,8 @@ class WhatsAppService {
     constructor(config = {}) {
         this.webhookUrl = config.webhookUrl || process.env.WHATSAPP_WEBHOOK_URL;
         this.chatId = config.chatId || process.env.WHATSAPP_CHAT_ID;
+        this.groupName = config.groupName || process.env.WHATSAPP_GROUP_NAME || 'MTI Alert!!';
+        this.useGroupName = config.useGroupName || process.env.WHATSAPP_USE_GROUP_NAME === 'true' || false;
         this.retryAttempts = config.retryAttempts || 3;
         this.retryDelay = config.retryDelay || 1000;
         this.htmlReportService = new HtmlReportService();
@@ -29,14 +31,18 @@ class WhatsAppService {
     /**
      * Send a message to WhatsApp
      * @param {string} message - The message to send
-     * @param {Object} options - Additional options
+     * @param {Object} options - Additional options (chatId, groupName, useGroupName)
      * @returns {Promise<boolean>} - Success status
      */
     async sendMessage(message, options = {}) {
-        const payload = {
-            id: options.chatId || this.chatId,
-            message: message
-        };
+        const payload = { message: message };
+        
+        // Determine whether to use group name or chat ID
+        if (options.useGroupName || (options.useGroupName === undefined && this.useGroupName)) {
+            payload.name = options.groupName || this.groupName;
+        } else {
+            payload.id = options.chatId || this.chatId;
+        }
 
         for (let attempt = 1; attempt <= this.retryAttempts; attempt++) {
             try {
@@ -53,7 +59,7 @@ class WhatsAppService {
                     this.logger.info('WhatsApp message sent successfully', {
                         messageLength: message.length,
                         attempt,
-                        chatId: payload.id
+                        target: payload.name ? `group: ${payload.name}` : `chat: ${payload.id}`
                     });
                     return true;
                 }
@@ -149,7 +155,11 @@ class WhatsAppService {
      */
     async sendAlert(alert) {
         const message = this.formatAlert(alert);
-        return await this.sendMessage(message);
+        return await this.sendMessage(message, {
+            useGroupName: this.useGroupName,
+            groupName: this.groupName,
+            chatId: this.chatId
+        });
     }
 
     /**
@@ -426,7 +436,13 @@ class WhatsAppService {
                 filename: imagePath.split('/').pop() || 'report.png',
                 contentType: 'image/png'
             });
-            formData.append('id', options.chatId || this.chatId);
+            
+            // Determine whether to use group name or chat ID for image sending
+            if (options.useGroupName || (!options.chatId && !this.chatId)) {
+                formData.append('name', options.groupName || this.groupName);
+            } else {
+                formData.append('id', options.chatId || this.chatId);
+            }
             
             if (options.caption) {
                 formData.append('message', options.caption);
@@ -450,7 +466,9 @@ class WhatsAppService {
 
             this.logger.info('WhatsApp image sent successfully', {
                 imagePath,
-                chatId: options.chatId || this.chatId,
+                target: (options.useGroupName || (!options.chatId && !this.chatId)) ? 
+                    `group: ${options.groupName || this.groupName}` : 
+                    `chat: ${options.chatId || this.chatId}`,
                 status: response.status,
                 responseData: response.data
             });
@@ -461,6 +479,9 @@ class WhatsAppService {
             this.logger.error('WhatsApp image send error', {
                 error: error.message,
                 imagePath,
+                target: (options.useGroupName || (!options.chatId && !this.chatId)) ? 
+                    `group: ${options.groupName || this.groupName}` : 
+                    `chat: ${options.chatId || this.chatId}`,
                 status: error.response?.status,
                 responseData: error.response?.data
             });

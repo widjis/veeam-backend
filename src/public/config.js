@@ -13,9 +13,32 @@ function extractTimeFromCron(cronExpression) {
     return '08:00';
 }
 
+// Update server time display
+function updateServerTime() {
+    const now = new Date();
+    const timeString = now.toLocaleString('en-US', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: false
+    });
+    
+    const timeElement = document.getElementById('current-server-time');
+    if (timeElement) {
+        timeElement.textContent = timeString;
+    }
+}
+
 // Initialize page
 document.addEventListener('DOMContentLoaded', function() {
     loadConfig();
+    updateServerTime();
+    
+    // Update server time every second
+    setInterval(updateServerTime, 1000);
     
     // Add event listeners for section toggles
     document.querySelectorAll('[data-toggle="section"]').forEach(header => {
@@ -52,6 +75,14 @@ document.addEventListener('DOMContentLoaded', function() {
             saveSectionConfig(section);
         }
     });
+    
+    // Add event listener for WhatsApp field toggling
+    const useGroupNameCheckbox = document.querySelector('[name="whatsapp.useGroupName"]');
+    if (useGroupNameCheckbox) {
+        useGroupNameCheckbox.addEventListener('change', function() {
+            toggleWhatsAppFields(this.checked);
+        });
+    }
     
     // Setup modal event listeners
     setupModalEventListeners();
@@ -171,6 +202,28 @@ function populateForm(config) {
             }
         }
     }
+    
+    function setCheckboxValue(name, value) {
+        const element = document.querySelector(`[name="${name}"]`);
+        if (element) {
+            element.checked = value;
+        }
+    }
+    
+    function toggleWhatsAppFields(useGroupName) {
+        const chatIdGroup = document.getElementById('whatsapp-chatId-group');
+        const groupNameGroup = document.getElementById('whatsapp-groupName-group');
+        
+        if (chatIdGroup && groupNameGroup) {
+            if (useGroupName) {
+                chatIdGroup.style.display = 'none';
+                groupNameGroup.style.display = 'block';
+            } else {
+                chatIdGroup.style.display = 'block';
+                groupNameGroup.style.display = 'none';
+            }
+        }
+    }
 
 
 
@@ -189,6 +242,11 @@ function populateForm(config) {
     if (config.whatsapp) {
         setValue('whatsapp.webhookUrl', config.whatsapp.webhookUrl || '');
         setValue('whatsapp.chatId', config.whatsapp.chatId || '');
+        setValue('whatsapp.groupName', config.whatsapp.groupName || 'MTI Alert!!');
+        setCheckboxValue('whatsapp.useGroupName', config.whatsapp.useGroupName || false);
+        
+        // Toggle visibility based on useGroupName setting
+        toggleWhatsAppFields(config.whatsapp.useGroupName || false);
         setValue('whatsapp.timeout', config.whatsapp.timeout || 10000);
         setValue('whatsapp.retryAttempts', config.whatsapp.retryAttempts || 3);
     }

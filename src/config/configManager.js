@@ -37,10 +37,18 @@ class ConfigManager {
             
             whatsapp: Joi.object({
                 webhookUrl: Joi.string().uri().required(),
-                chatId: Joi.string().required(),
+                chatId: Joi.string().allow('').optional(),
+                groupName: Joi.string().allow('').optional(),
+                useGroupName: Joi.boolean().default(false),
                 retryAttempts: Joi.number().default(3),
                 retryDelay: Joi.number().default(1000)
-            }).required(),
+            }).required().custom((value, helpers) => {
+                // Ensure either chatId or groupName is provided
+                if (!value.chatId && !value.groupName) {
+                    return helpers.error('whatsapp.missing_target', { message: 'Either chatId or groupName must be provided' });
+                }
+                return value;
+            }),
             
             reporting: Joi.object({
                 schedules: Joi.array().items(
@@ -203,6 +211,8 @@ class ConfigManager {
             whatsapp: {
                 webhookUrl: process.env.WHATSAPP_WEBHOOK_URL || '',
                 chatId: process.env.WHATSAPP_CHAT_ID || '',
+                groupName: process.env.WHATSAPP_GROUP_NAME || 'MTI Alert!!',
+                useGroupName: process.env.WHATSAPP_USE_GROUP_NAME === 'true' || false,
                 retryAttempts: 3,
                 retryDelay: 1000
             },

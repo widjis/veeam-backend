@@ -8,11 +8,13 @@
     "maxRetries": 3
   },
   "whatsapp": {
-    "webhookUrl": "",
-    "chatId": "",
-    "retryAttempts": 3,
-    "retryDelay": 1000
-  },
+        "webhookUrl": "",
+        "chatId": "",
+        "groupName": "MTI Alert!!",
+        "useGroupName": false,
+        "retryAttempts": 3,
+        "retryDelay": 1000
+    },
   "reporting": {
     "schedules": [
       {

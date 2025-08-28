@@ -610,6 +610,50 @@ Retrieves alert statistics.
 curl -X GET http://localhost:3005/api/alerts/stats
 ```
 
+### POST /api/alerts/acknowledge-all
+
+Acknowledges all active alerts at once.
+
+**Request Body (Optional):**
+```json
+{
+  "acknowledgedBy": "John Doe"
+}
+```
+
+**Response:**
+```json
+{
+  "message": "Successfully acknowledged 5 alerts",
+  "count": 5,
+  "alerts": [
+    {
+      "id": "alert-123",
+      "type": "jobFailure",
+      "severity": "critical",
+      "acknowledged": true,
+      "acknowledgedBy": "John Doe",
+      "acknowledgedAt": "2024-01-15T10:30:00.000Z"
+    }
+  ],
+  "acknowledgedBy": "John Doe",
+  "acknowledgedAt": "2024-01-15T10:30:00.000Z"
+}
+```
+
+**Example:**
+```bash
+# Acknowledge all alerts with default user
+curl -X POST http://localhost:3005/api/alerts/acknowledge-all
+
+# Acknowledge all alerts with custom user
+curl -X POST http://localhost:3005/api/alerts/acknowledge-all \
+  -H "Content-Type: application/json" \
+  -d '{
+    "acknowledgedBy": "John Doe"
+  }'
+```
+
 ### POST /api/alerts/test
 
 Creates a test alert for testing purposes.

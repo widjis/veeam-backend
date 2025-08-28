@@ -6,11 +6,12 @@ services:
     container_name: veeam-backend
     restart: unless-stopped
     ports:
-      - "${SERVER_PORT:-3000}:${SERVER_PORT:-3000}"
+      - "${SERVER_PORT:-3005}:${SERVER_PORT:-3005}"
+      - "514:514/udp"
     environment:
       - NODE_ENV=production
       - TZ=${TIMEZONE:-UTC}
-      - SERVER_PORT=${SERVER_PORT:-3000}
+      - SERVER_PORT=${SERVER_PORT:-3005}
       - SERVER_HOST=${SERVER_HOST:-0.0.0.0}
       - VEEAM_BASE_URL=${VEEAM_BASE_URL}
       - VEEAM_USERNAME=${VEEAM_USERNAME}
@@ -27,7 +28,7 @@ services:
       - ./config:/app/config
       - ./reports:/app/reports
     healthcheck:
-      test: ["CMD", "node", "-e", "const port = process.env.SERVER_PORT || 3000; require('http').get('http://localhost:' + port + '/health', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) }).on('error', () => process.exit(1))"]
+      test: ["CMD", "node", "-e", "const port = process.env.SERVER_PORT || 3005; require('http').get('http://localhost:' + port + '/health', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) }).on('error', () => process.exit(1))"]
       interval: 30s
       timeout: 10s
       retries: 3

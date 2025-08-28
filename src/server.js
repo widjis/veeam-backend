@@ -917,11 +917,17 @@ class VeeamBackendServer extends EventEmitter {
             // Collect fresh data
             const data = await this.dataCollectionService.collectAllData();
             
-            // Check for alerts
-            await this.alertingService.runAlertChecks();
-            
-            // Send pending notifications
-            await this.alertingService.sendPendingAlerts();
+            // Only run alert checks if alerting is enabled
+            const alertingEnabled = this.configManager.get('alerting.enabled');
+            if (alertingEnabled) {
+                // Check for alerts
+                await this.alertingService.runAlertChecks();
+                
+                // Send pending notifications
+                await this.alertingService.sendPendingAlerts();
+            } else {
+                this.logger.debug('Alerting is disabled, skipping alert checks');
+            }
             
         } catch (error) {
             this.logger.error('Monitoring execution failed', { error: error.message });
@@ -971,65 +977,76 @@ class VeeamBackendServer extends EventEmitter {
             
             // Process the event based on severity and content
             const severityThreshold = parseInt(this.configManager.get('syslog.severityThreshold')) || 3;
+            const alertingEnabled = this.configManager.get('alerting.enabled');
+            
             if (eventData.severity <= severityThreshold) { // Check against configured threshold
                 
-                // Create a meaningful alert title and message based on extracted data
-                let alertTitle = 'Veeam System Event';
-                let message = veeamData.Description || veeamData.description || veeamData.eventMessage || veeamData.message || eventData.message || '';
-                
-                // Create more specific titles based on content
-                if (message.toLowerCase().includes('backup job')) {
-                    alertTitle = 'Veeam Backup Job Event';
-                } else if (message.toLowerCase().includes('session')) {
-                    alertTitle = 'Veeam Session Event';
-                } else if (message.toLowerCase().includes('repository')) {
-                    alertTitle = 'Veeam Repository Event';
-                } else if (veeamData.JobID) {
-                    alertTitle = `Veeam Job Event (ID: ${veeamData.JobID})`;
-                }
-                
-                // If we have a job name, include it in the title
-                if (veeamData.jobName) {
-                    alertTitle = `Veeam Job: ${veeamData.jobName}`;
-                }
-                
-                // Map syslog severity to alert severity
-                // Syslog severity: 0=Emergency, 1=Alert, 2=Critical, 3=Error, 4=Warning, 5=Notice, 6=Info, 7=Debug
-                let alertSeverity;
-                if (eventData.severity <= 2) {
-                    alertSeverity = 'critical';  // Emergency, Alert, Critical
-                } else if (eventData.severity <= 4) {
-                    alertSeverity = 'warning';   // Error, Warning
-                } else {
-                    alertSeverity = 'info';      // Notice, Info, Debug
-                }
-                
-                // Create an alert for events meeting the threshold
-                const alert = this.alertingService.createAlert(
-                    'syslog_event',
-                    alertSeverity,
-                    alertTitle,
-                    message,
-                    {
-                        source: 'syslog',
-                        hostname: eventData.hostname,
-                        timestamp: eventData.timestamp,
-                        jobId: veeamData.JobID,
-                        sessionId: veeamData.JobSessionID,
-                        severity: eventData.severity,
-                        raw: eventData.raw
+                // Only create and send alerts if alerting is enabled
+                if (alertingEnabled) {
+                    // Create a meaningful alert title and message based on extracted data
+                    let alertTitle = 'Veeam System Event';
+                    let message = veeamData.Description || veeamData.description || veeamData.eventMessage || veeamData.message || eventData.message || '';
+                    
+                    // Create more specific titles based on content
+                    if (message.toLowerCase().includes('backup job')) {
+                        alertTitle = 'Veeam Backup Job Event';
+                    } else if (message.toLowerCase().includes('session')) {
+                        alertTitle = 'Veeam Session Event';
+                    } else if (message.toLowerCase().includes('repository')) {
+                        alertTitle = 'Veeam Repository Event';
+                    } else if (veeamData.JobID) {
+                        alertTitle = `Veeam Job Event (ID: ${veeamData.JobID})`;
                     }
-                );
-                
-                this.logger.info('Created syslog alert:', {
-                    alertId: alert.id,
-                    title: alertTitle,
-                    severity: eventData.severity,
-                    message: message.substring(0, 100) + (message.length > 100 ? '...' : '')
-                });
-                
-                // Send the alert notification immediately
-                await this.alertingService.sendAlertNotification(alert);
+                    
+                    // If we have a job name, include it in the title
+                    if (veeamData.jobName) {
+                        alertTitle = `Veeam Job: ${veeamData.jobName}`;
+                    }
+                    
+                    // Map syslog severity to alert severity
+                    // Syslog severity: 0=Emergency, 1=Alert, 2=Critical, 3=Error, 4=Warning, 5=Notice, 6=Info, 7=Debug
+                    let alertSeverity;
+                    if (eventData.severity <= 2) {
+                        alertSeverity = 'critical';  // Emergency, Alert, Critical
+                    } else if (eventData.severity <= 4) {
+                        alertSeverity = 'warning';   // Error, Warning
+                    } else {
+                        alertSeverity = 'info';      // Notice, Info, Debug
+                    }
+                    
+                    // Create an alert for events meeting the threshold
+                    const alert = this.alertingService.createAlert(
+                        'syslog_event',
+                        alertSeverity,
+                        alertTitle,
+                        message,
+                        {
+                            source: 'syslog',
+                            hostname: eventData.hostname,
+                            timestamp: eventData.timestamp,
+                            jobId: veeamData.JobID,
+                            sessionId: veeamData.JobSessionID,
+                            severity: eventData.severity,
+                            raw: eventData.raw
+                        }
+                    );
+                    
+                    this.logger.info('Created syslog alert:', {
+                        alertId: alert.id,
+                        title: alertTitle,
+                        severity: eventData.severity,
+                        message: message.substring(0, 100) + (message.length > 100 ? '...' : '')
+                    });
+                    
+                    // Send the alert notification immediately
+                    await this.alertingService.sendAlertNotification(alert);
+                } else {
+                    this.logger.debug('Alerting is disabled, skipping syslog alert creation for event:', {
+                        severity: eventData.severity,
+                        hostname: eventData.hostname,
+                        message: (veeamData.Description || veeamData.description || eventData.message || '').substring(0, 100)
+                    });
+                }
             }
             
             // Emit event for other services that might be interested
